@@ -4,7 +4,7 @@ import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
 import { CalendarView } from './components/CalendarView'
 import { useMediaEntries } from './hooks/useMediaEntries'
-import { migrateToSeparateStorage, isCloudUser, getCloudUserId, signOut } from './lib/storage'
+import { migrateToSeparateStorage, isCloudUser, getCloudUserId } from './lib/storage'
 import type { MediaEntry, ListType } from './types'
 
 // Run migration once on module load
@@ -247,12 +247,6 @@ function App() {
     setShowAuth(false)
     // Refresh entries after signing in
     await refresh?.()
-  }
-
-  const handleSignOut = () => {
-    signOut()
-    // Refresh entries after signing out (will use local storage)
-    refresh?.()
   }
 
   useEffect(() => {

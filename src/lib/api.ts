@@ -8,12 +8,12 @@ export interface FetchEntriesResponse {
 }
 
 export interface CreateEntryResponse {
-  entry: MediaEntry
+  entry?: MediaEntry
   error?: string
 }
 
 export interface AuthResponse {
-  userId: string
+  userId?: string
   error?: string
 }
 

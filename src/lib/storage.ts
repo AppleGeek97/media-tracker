@@ -128,7 +128,7 @@ export const syncEntriesFromCloud = async (userId: string, listType: ListType) =
   return loadEntries(listType)
 }
 
-export const subscribeToEntries = async (
+export const subscribeToEntries = (
   userId: string,
   listType: ListType,
   callback: (entries: MediaEntry[]) => void
@@ -137,7 +137,7 @@ export const subscribeToEntries = async (
 
   // Sync from cloud if cloud user
   if (isCloud) {
-    await syncEntriesFromCloud(userId, listType)
+    syncEntriesFromCloud(userId, listType).catch(console.error)
   }
 
   const wrappedCallback = (entries: MediaEntry[]) => {

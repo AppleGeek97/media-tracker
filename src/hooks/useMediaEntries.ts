@@ -4,7 +4,6 @@ import {
   getCloudUserId,
   isCloudUser,
   subscribeToEntries,
-  syncEntriesFromCloud,
   addEntry,
   updateEntry,
   deleteEntry,
@@ -46,7 +45,8 @@ export function useMediaEntries(listType: ListType) {
       }
     }
     checkCloudUser()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   const filteredEntries = entries
     .filter((e) => filters.type === 'all' || e.type === filters.type)
