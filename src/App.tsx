@@ -16,7 +16,7 @@ function MobileWarning() {
       <div className="max-w-md space-y-4 text-center">
         <h1 className="text-2xl font-bold text-text">PLEASE USE DESKTOP</h1>
         <p className="text-sm text-muted">
-          Media Logbook is designed for desktop browsers and doesn't support mobile devices yet.
+          Jeff Log is designed for desktop browsers and doesn't support mobile devices yet.
         </p>
         <div className="flex justify-center gap-2 text-xs text-dim">
           <span>🖥️ Desktop</span>

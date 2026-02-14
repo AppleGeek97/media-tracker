@@ -1,7 +1,7 @@
 {
-  "name": "Media Logbook",
-  "short_name": "Logbook",
-  "description": "Personal media logbook for movies, TV, games, and books",
+  "name": "Jeff Log",
+  "short_name": "Jeff Log",
+  "description": "Personal media log for movies, TV, games, and books",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f0f",
