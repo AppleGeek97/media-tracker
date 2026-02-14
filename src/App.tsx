@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { InputBar } from './components/InputBar'
 import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
@@ -505,6 +506,9 @@ function App() {
           onClose={() => setShowAuth(false)}
         />
       )}
+
+      {/* Speed Insights */}
+      <SpeedInsights />
     </div>
   )
 }
