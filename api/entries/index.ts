@@ -1,16 +1,23 @@
 import { sql } from '../db.js'
+import { requireAuth, AuthError } from '../lib/auth.js'
 
 export async function GET(request: Request) {
-  const url = new URL(request.url)
-  const userId = url.searchParams.get('userId')
-  const listType = url.searchParams.get('list')
-
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Missing userId' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })
+  // Authenticate request using JWT
+  let auth
+  try {
+    auth = await requireAuth(request)
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    throw error
   }
+
+  const url = new URL(request.url)
+  const listType = url.searchParams.get('list')
 
   if (!listType || (listType !== 'backlog' && listType !== 'futurelog')) {
     return new Response(JSON.stringify({ error: 'Invalid or missing listType' }), {
@@ -22,7 +29,7 @@ export async function GET(request: Request) {
   try {
     const entries = await sql`
       SELECT * FROM media_entries
-      WHERE user_id = ${userId} AND list_type = ${listType}
+      WHERE user_id = ${auth.userId} AND list_type = ${listType}
       ORDER BY created_at DESC
     `
     return new Response(

@@ -1,6 +1,21 @@
 import { sql } from '../db.js'
+import { requireAuth, AuthError } from '../lib/auth.js'
 
 export async function POST(request: Request) {
+  // Authenticate request using JWT
+  let auth
+  try {
+    auth = await requireAuth(request)
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    throw error
+  }
+
   try {
     const body = await request.json()
     const { id } = body
@@ -12,9 +27,10 @@ export async function POST(request: Request) {
       })
     }
 
+    // SECURITY FIX: Only delete entries owned by the authenticated user
     const result = await sql`
       DELETE FROM media_entries
-      WHERE id = ${id}
+      WHERE id = ${id} AND user_id = ${auth.userId}
       RETURNING id
     `
 

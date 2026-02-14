@@ -1,13 +1,12 @@
 import type { MediaEntry, ListType } from '../types'
 import * as api from './api'
+import { isAuthenticated, clearTokens } from './auth'
 
 const BACKLOG_KEY = 'media-logbook-backlog'
 const FUTURELOG_KEY = 'media-logbook-futurelog'
 const OLD_STORAGE_KEY = 'media-logbook-entries'
 const USER_KEY = 'media-logbook-user'
 const MIGRATED_KEY = 'media-logbook-migrated'
-const USER_EMAIL_KEY = 'media-logbook-user-email'
-const USER_ID_KEY = 'media-logbook-user-id'
 
 // Generate or retrieve a local user ID (for backward compatibility)
 export const getLocalUserId = (): string => {
@@ -19,37 +18,15 @@ export const getLocalUserId = (): string => {
   return userId
 }
 
-// Get or create cloud user ID via email authentication
-export const getCloudUserId = async (email?: string): Promise<string> => {
-  // If email provided, authenticate and get userId
-  if (email) {
-    const result = await api.authEmail(email)
-    if (result.userId) {
-      localStorage.setItem(USER_ID_KEY, result.userId)
-      localStorage.setItem(USER_EMAIL_KEY, email)
-      return result.userId
-    }
-  }
-
-  // Check if we have a stored cloud userId
-  const storedUserId = localStorage.getItem(USER_ID_KEY)
-  if (storedUserId) {
-    return storedUserId
-  }
-
-  // Fallback to local userId
-  return getLocalUserId()
-}
-
-// Check if user is using cloud storage
+// Check if user is using cloud storage (authenticated)
 export const isCloudUser = (): boolean => {
-  return !!localStorage.getItem(USER_ID_KEY)
+  return isAuthenticated()
 }
 
-// Sign out (clear cloud user)
-export const signOut = () => {
-  localStorage.removeItem(USER_ID_KEY)
-  localStorage.removeItem(USER_EMAIL_KEY)
+// Sign out (clear cloud user tokens)
+export const signOut = async () => {
+  await api.authSignout()
+  clearTokens()
 }
 
 const getStorageKey = (listType: ListType): string => {
@@ -119,8 +96,8 @@ const notifyListeners = (listType: ListType) => {
 }
 
 // Sync entries from cloud to local cache
-export const syncEntriesFromCloud = async (userId: string, listType: ListType) => {
-  const result = await api.fetchEntries(userId, listType)
+export const syncEntriesFromCloud = async (listType: ListType) => {
+  const result = await api.fetchEntries(listType)
   if (result.entries && !result.error) {
     saveEntries(result.entries, listType)
     return result.entries
@@ -129,7 +106,6 @@ export const syncEntriesFromCloud = async (userId: string, listType: ListType) =
 }
 
 export const subscribeToEntries = (
-  userId: string,
   listType: ListType,
   callback: (entries: MediaEntry[]) => void
 ) => {
@@ -137,14 +113,14 @@ export const subscribeToEntries = (
 
   // Sync from cloud if cloud user
   if (isCloud) {
-    syncEntriesFromCloud(userId, listType).catch(console.error)
+    syncEntriesFromCloud(listType).catch(console.error)
   }
 
   const wrappedCallback = (entries: MediaEntry[]) => {
-    const userEntries = entries
-      .filter((e) => e.userId === userId)
+    // Sort entries by creation date (newest first)
+    const sortedEntries = entries
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    callback(userEntries)
+    callback(sortedEntries)
   }
 
   listenersByList[listType].push(wrappedCallback)
@@ -155,12 +131,12 @@ export const subscribeToEntries = (
   }
 }
 
-export const addEntry = async (entry: Omit<MediaEntry, 'id' | 'createdAt'>) => {
+export const addEntry = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId'>) => {
   const listType = entry.list
   const isCloud = isCloudUser()
 
   if (isCloud) {
-    // Use API for cloud users
+    // Use API for cloud users (userId added automatically from JWT)
     const result = await api.createEntry(entry)
     if (result.entry) {
       // Update local cache
@@ -172,10 +148,12 @@ export const addEntry = async (entry: Omit<MediaEntry, 'id' | 'createdAt'>) => {
     }
     throw new Error(result.error || 'Failed to create entry')
   } else {
-    // Use localStorage for local users
+    // Use localStorage for local users (need to add userId)
     const entries = loadEntries(listType)
+    const userId = getLocalUserId()
     const newEntry: MediaEntry = {
       ...entry,
+      userId,
       id: crypto.randomUUID(),
       createdAt: new Date(),
     }

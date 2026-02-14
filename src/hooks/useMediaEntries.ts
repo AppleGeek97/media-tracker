@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react'
 import {
-  getLocalUserId,
-  getCloudUserId,
-  isCloudUser,
   subscribeToEntries,
   addEntry,
   updateEntry,
@@ -11,13 +8,6 @@ import {
 import type { MediaEntry, SortField, Filters, ListType } from '../types'
 
 export function useMediaEntries(listType: ListType) {
-  const [userId, setUserId] = useState(() => {
-    // Check if cloud user is logged in
-    if (isCloudUser()) {
-      return localStorage.getItem('media-logbook-user-id') || getLocalUserId()
-    }
-    return getLocalUserId()
-  })
   const [entries, setEntries] = useState<MediaEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [sortField, setSortField] = useState<SortField>('title')
@@ -26,27 +16,13 @@ export function useMediaEntries(listType: ListType) {
 
   useEffect(() => {
     setLoading(true)
-    const unsubscribe = subscribeToEntries(userId, listType, (data) => {
+    const unsubscribe = subscribeToEntries(listType, (data) => {
       setEntries(data)
       setLoading(false)
     })
 
     return unsubscribe
-  }, [userId, listType, refreshKey])
-
-  // Update userId when cloud auth changes
-  useEffect(() => {
-    const checkCloudUser = async () => {
-      if (isCloudUser()) {
-        const cloudUserId = await getCloudUserId()
-        if (cloudUserId && cloudUserId !== userId) {
-          setUserId(cloudUserId)
-        }
-      }
-    }
-    checkCloudUser()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId])
+  }, [listType, refreshKey])
 
   const filteredEntries = entries
     .filter((e) => filters.type === 'all' || e.type === filters.type)
@@ -58,8 +34,8 @@ export function useMediaEntries(listType: ListType) {
       return b.year - a.year
     })
 
-  const add = async (entry: Omit<MediaEntry, 'id' | 'userId' | 'createdAt'>) => {
-    await addEntry({ ...entry, userId })
+  const add = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId'>) => {
+    await addEntry(entry)
   }
 
   const update = async (id: string, updates: Partial<MediaEntry>) => {
@@ -75,7 +51,6 @@ export function useMediaEntries(listType: ListType) {
   }
 
   return {
-    user: { uid: userId },
     entries: filteredEntries,
     loading,
     sortField,
