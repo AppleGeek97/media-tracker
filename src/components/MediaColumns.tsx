@@ -28,7 +28,7 @@ export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry }:
   return (
     <div className="flex-1 grid grid-cols-4 gap-px bg-border h-full overflow-hidden">
       {columns.map(({ type, label, color }) => (
-        <button
+        <div
           key={type}
           onClick={() => onAddEntry?.(type)}
           className={`bg-bg flex flex-col h-full ${onAddEntry ? 'hover:bg-panel/30 cursor-pointer' : ''} transition-colors`}
@@ -82,7 +82,7 @@ export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry }:
               </div>
             )}
           </div>
-        </button>
+        </div>
       ))}
     </div>
   )
