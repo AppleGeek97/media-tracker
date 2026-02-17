@@ -31,12 +31,12 @@ export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry }:
         <div
           key={type}
           onClick={() => onAddEntry?.(type)}
-          className={`bg-bg flex flex-col h-full ${onAddEntry ? 'hover:bg-panel/30 cursor-pointer' : ''} transition-colors`}
+          className={`bg-bg flex flex-col h-full min-h-0 ${onAddEntry ? 'hover:bg-panel/30 cursor-pointer' : ''} transition-colors`}
         >
           <div className={`px-4 py-3 border-b ${color}`}>
             <span className="text-xs">{label}</span>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-0">
             {getEntriesByType(type).map((entry) => (
               <button
                 key={entry.id}
