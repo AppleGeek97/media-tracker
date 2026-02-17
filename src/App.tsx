@@ -4,12 +4,7 @@ import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
 import { CalendarView } from './components/CalendarView'
 import { useMediaEntries } from './hooks/useMediaEntries'
-import { migrateToSeparateStorage, isCloudUser } from './lib/storage'
-import { authSignup, authLogin, authSignout } from './lib/api'
 import type { MediaEntry, ListType } from './types'
-
-// Run migration once on module load
-migrateToSeparateStorage()
 
 function MobileWarning() {
   return (
@@ -150,138 +145,7 @@ function ListToggle({ currentList, onToggle }: { currentList: ListType; onToggle
   )
 }
 
-function AuthModal({ onAuthSuccess, onClose }: { onAuthSuccess: () => void; onClose: () => void }) {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-
-    // Validate username
-    if (!username || username.length < 3 || username.length > 50) {
-      setError('Username must be between 3 and 50 characters')
-      return
-    }
-
-    // Validate username is alphanumeric
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      setError('Username can only contain letters, numbers, and underscores')
-      return
-    }
-
-    // Validate password
-    if (!password || password.length < 8) {
-      setError('Password must be at least 8 characters')
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      if (mode === 'signup') {
-        const result = await authSignup(username, password)
-        if (result.error) {
-          setError(result.error)
-        } else if (result.access_token) {
-          onAuthSuccess()
-        }
-      } else {
-        const result = await authLogin(username, password)
-        if (result.error) {
-          setError(result.error)
-        } else if (result.access_token) {
-          onAuthSuccess()
-        }
-      }
-    } catch (err) {
-      setError('Authentication failed. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80" onClick={onClose} />
-      <div className="relative w-full max-w-sm border border-border bg-bg">
-        <div className="p-4 border-b border-border flex justify-between items-center">
-          <span className="text-xs text-text">CLOUD SYNC</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => { setMode('login'); setError('') }}
-              className={`text-xs px-2 py-1 border border-border ${
-                mode === 'login' ? 'bg-border text-text' : 'text-muted hover:text-text'
-              }`}
-            >
-              LOGIN
-            </button>
-            <button
-              onClick={() => { setMode('signup'); setError('') }}
-              className={`text-xs px-2 py-1 border border-border ${
-                mode === 'signup' ? 'bg-border text-text' : 'text-muted hover:text-text'
-              }`}
-            >
-              SIGN UP
-            </button>
-          </div>
-        </div>
-        <div className="p-4 space-y-4">
-          <p className="text-xs text-muted">
-            {mode === 'login' ? 'Log in to sync your entries across devices.' : 'Create an account to sync your entries across devices.'}
-          </p>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div>
-              <label className="text-label text-xs block mb-1">USERNAME</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="your_username"
-                className="w-full px-3 py-2 text-xs border border-border bg-bg text-text focus:border-muted outline-none"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="text-label text-xs block mb-1">PASSWORD</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="•••••••••"
-                className="w-full px-3 py-2 text-xs border border-border bg-bg text-text focus:border-muted outline-none"
-              />
-            </div>
-            {error && (
-              <div className="text-xs text-dropped">{error}</div>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-3 py-2 text-xs border border-border text-text hover:border-muted disabled:opacity-50"
-              >
-                {loading ? 'PROCESSING...' : mode === 'login' ? 'LOG IN' : 'SIGN UP'}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3 py-2 text-xs border border-border text-muted hover:text-text hover:border-muted"
-              >
-                CANCEL
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ThemeToggle({ isDayTheme, onToggle, onShowAuth, onSignOut }: { isDayTheme: boolean; onToggle: () => void; onShowAuth: () => void; onSignOut: () => void }) {
+function ThemeToggle({ isDayTheme, onToggle }: { isDayTheme: boolean; onToggle: () => void }) {
   return (
     <div className="fixed top-4 left-4 z-50 flex gap-2">
       <button
@@ -309,23 +173,6 @@ function ThemeToggle({ isDayTheme, onToggle, onShowAuth, onSignOut }: { isDayThe
           </svg>
         )}
       </button>
-      {isCloudUser() ? (
-        <button
-          onClick={onSignOut}
-          className="px-2 py-1 text-xs border border-border text-completed hover:text-text hover:border-muted"
-          title="Sign out"
-        >
-          ☁ SIGNED OUT
-        </button>
-      ) : (
-        <button
-          onClick={onShowAuth}
-          className="px-2 py-1 text-xs border border-border text-muted hover:text-text hover:border-muted"
-          title="Cloud sync"
-        >
-          ☁ SYNC
-        </button>
-      )}
     </div>
   )
 }
@@ -336,9 +183,8 @@ function App() {
   const [showSaved, setShowSaved] = useState(false)
   const [entryCount, setEntryCount] = useState(0)
   const [currentList, setCurrentList] = useState<ListType>('backlog')
-  const { entries, loading, add, update, remove, refresh } = useMediaEntries(currentList)
+  const { entries, loading, add, update, remove } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
-  const [showAuth, setShowAuth] = useState(false)
   const [isDayTheme, setIsDayTheme] = useState(() => {
     return localStorage.getItem('jefflog-theme') === 'day'
   })
@@ -353,18 +199,6 @@ function App() {
   }, [isDayTheme])
 
   const toggleTheme = () => setIsDayTheme((prev) => !prev)
-
-  const handleAuthSuccess = async () => {
-    setShowAuth(false)
-    // Refresh entries after signing in
-    await refresh?.()
-  }
-
-  const handleSignOut = async () => {
-    await authSignout()
-    // Refresh entries after signing out
-    await refresh?.()
-  }
 
   useEffect(() => {
     if (!loading && entries.length !== entryCount) {
@@ -488,7 +322,7 @@ function App() {
 
   return (
     <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'mr-72' : ''}`}>
-      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} onShowAuth={() => setShowAuth(true)} onSignOut={handleSignOut} />
+      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} />
 
       {/* Calendar Toggle */}
       <button
@@ -655,14 +489,6 @@ function App() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Auth Modal */}
-      {showAuth && (
-        <AuthModal
-          onAuthSuccess={handleAuthSuccess}
-          onClose={() => setShowAuth(false)}
-        />
       )}
     </div>
   )
