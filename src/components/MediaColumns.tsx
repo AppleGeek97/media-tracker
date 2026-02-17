@@ -4,6 +4,7 @@ interface MediaColumnsProps {
   entries: MediaEntry[]
   onEntryClick: (entry: MediaEntry) => void
   currentList: ListType
+  onAddEntry?: (type: MediaType) => void
 }
 
 const columns: { type: MediaType; label: string; color: string }[] = [
@@ -20,14 +21,18 @@ const hoverColors: Record<MediaType, string> = {
   comic: 'hover:text-comic',
 }
 
-export function MediaColumns({ entries, onEntryClick, currentList }: MediaColumnsProps) {
+export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry }: MediaColumnsProps) {
   const getEntriesByType = (type: MediaType) =>
     entries.filter((e) => e.type === type)
 
   return (
     <div className="flex-1 grid grid-cols-4 gap-px bg-border">
       {columns.map(({ type, label, color }) => (
-        <div key={type} className="bg-bg flex flex-col">
+        <button
+          key={type}
+          onClick={() => onAddEntry?.(type)}
+          className={`bg-bg flex flex-col ${onAddEntry ? 'hover:bg-panel/30 cursor-pointer' : ''} transition-colors`}
+        >
           <div className={`px-4 py-3 border-b ${color}`}>
             <span className="text-xs">{label}</span>
           </div>
@@ -35,7 +40,10 @@ export function MediaColumns({ entries, onEntryClick, currentList }: MediaColumn
             {getEntriesByType(type).map((entry) => (
               <button
                 key={entry.id}
-                onClick={() => onEntryClick(entry)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEntryClick(entry)
+                }}
                 className={`w-full text-left px-4 py-2 border-b border-border/50 hover:bg-panel group ${hoverColors[type]}`}
               >
                 <div className="flex items-center gap-2">
@@ -74,7 +82,7 @@ export function MediaColumns({ entries, onEntryClick, currentList }: MediaColumn
               </div>
             )}
           </div>
-        </div>
+        </button>
       ))}
     </div>
   )

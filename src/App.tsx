@@ -388,6 +388,27 @@ function App() {
     setTimeout(() => setShowSaved(false), 1500)
   }
 
+  const placeholderTitles: Record<MediaEntry['type'], string> = {
+    movie: 'New Movie',
+    tv: 'New TV Show',
+    game: 'New Game',
+    comic: 'New Comic',
+  }
+
+  const handleQuickAdd = async (type: MediaEntry['type']) => {
+    await add({
+      title: placeholderTitles[type],
+      type,
+      status: 'planned',
+      year: new Date().getFullYear(),
+      list: currentList,
+      seasonsCompleted: type === 'tv' ? 0 : undefined,
+    })
+    setEntryCount(entries.length + 1)
+    setShowSaved(true)
+    setTimeout(() => setShowSaved(false), 1500)
+  }
+
   // Reset time filter when switching lists
   const handleListToggle = (list: ListType) => {
     setCurrentList(list)
@@ -537,6 +558,7 @@ function App() {
           entries={filteredEntries}
           onEntryClick={handleEntryClick}
           currentList={currentList}
+          onAddEntry={handleQuickAdd}
         />
       </div>
 
