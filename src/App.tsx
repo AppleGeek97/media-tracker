@@ -462,41 +462,12 @@ function App() {
     setTimeout(() => setShowSaved(false), 1500)
   }
 
-  const handleStatusCycle = async () => {
-    if (!selectedEntry) return
-    const statusOrder: MediaEntry['status'][] = ['planned', 'in_progress', 'paused', 'completed', 'dropped']
-    const currentIndex = statusOrder.indexOf(selectedEntry.status)
-    const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length]
-
-    // Set completedAt when marking as completed
-    const today = new Date()
-    const completedAt = nextStatus === 'completed'
-      ? `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`
-      : selectedEntry.completedAt
-
-    await update(selectedEntry.id, { status: nextStatus, completedAt })
-    setSelectedEntry({ ...selectedEntry, status: nextStatus, completedAt })
-    setShowSaved(true)
-    setTimeout(() => setShowSaved(false), 1500)
-  }
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'movie': return 'text-movie'
       case 'tv': return 'text-tv'
       case 'game': return 'text-game'
       case 'comic': return 'text-comic'
-      default: return 'text-muted'
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'planned': return 'text-planned'
-      case 'in_progress': return 'text-inprogress'
-      case 'paused': return 'text-paused'
-      case 'completed': return 'text-completed'
-      case 'dropped': return 'text-dropped'
       default: return 'text-muted'
     }
   }
@@ -610,32 +581,59 @@ function App() {
 
             <div className="p-4 space-y-3">
               <div>
-                <span className="text-label text-xs block mb-1">TITLE</span>
-                <span className="text-text">{selectedEntry.title}</span>
+                <label className="text-label text-xs block mb-1">TITLE</label>
+                <input
+                  type="text"
+                  value={selectedEntry.title}
+                  onChange={(e) => setSelectedEntry({ ...selectedEntry, title: e.target.value })}
+                  onBlur={() => update(selectedEntry.id, { title: selectedEntry.title })}
+                  className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
+                />
               </div>
-              <div className="flex gap-8">
+              <div className="flex gap-4">
                 {selectedEntry.list === 'backlog' && (
                   <>
-                    <div>
-                      <span className="text-label text-xs block mb-1">YEAR</span>
-                      <span className="text-muted text-sm">{selectedEntry.year}</span>
+                    <div className="flex-1">
+                      <label className="text-label text-xs block mb-1">YEAR</label>
+                      <input
+                        type="number"
+                        value={selectedEntry.year}
+                        onChange={(e) => setSelectedEntry({ ...selectedEntry, year: parseInt(e.target.value) || new Date().getFullYear() })}
+                        onBlur={() => update(selectedEntry.id, { year: selectedEntry.year })}
+                        className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
+                      />
                     </div>
-                    <div>
-                      <span className="text-label text-xs block mb-1">STATUS</span>
-                      <span className={`text-sm ${getStatusColor(selectedEntry.status)}`}>{selectedEntry.status.replace('_', ' ').toUpperCase()}</span>
+                    <div className="flex-1">
+                      <label className="text-label text-xs block mb-1">STATUS</label>
+                      <select
+                        value={selectedEntry.status}
+                        onChange={(e) => {
+                          const newStatus = e.target.value as MediaEntry['status']
+                          setSelectedEntry({ ...selectedEntry, status: newStatus })
+                          update(selectedEntry.id, { status: newStatus })
+                        }}
+                        className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
+                      >
+                        <option value="planned">PLANNED</option>
+                        <option value="in_progress">IN PROGRESS</option>
+                        <option value="paused">PAUSED</option>
+                        <option value="completed">COMPLETED</option>
+                        <option value="dropped">DROPPED</option>
+                      </select>
                     </div>
-                    {selectedEntry.status === 'completed' && selectedEntry.completedAt && (
-                      <div>
-                        <span className="text-label text-xs block mb-1">FINISHED</span>
-                        <span className="text-muted text-sm">{selectedEntry.completedAt}</span>
-                      </div>
-                    )}
                   </>
                 )}
                 {selectedEntry.list === 'futurelog' && (
-                  <div>
-                    <span className="text-label text-xs block mb-1">RELEASE</span>
-                    <span className="text-muted text-sm">{selectedEntry.releaseDate || 'Not set'}</span>
+                  <div className="flex-1">
+                    <label className="text-label text-xs block mb-1">RELEASE DATE</label>
+                    <input
+                      type="text"
+                      value={selectedEntry.releaseDate || ''}
+                      onChange={(e) => setSelectedEntry({ ...selectedEntry, releaseDate: e.target.value })}
+                      onBlur={() => update(selectedEntry.id, { releaseDate: selectedEntry.releaseDate })}
+                      placeholder="DD/MM/YYYY"
+                      className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
+                    />
                   </div>
                 )}
               </div>
@@ -648,14 +646,6 @@ function App() {
               >
                 CLOSE
               </button>
-              {selectedEntry.list === 'backlog' && (
-                <button
-                  onClick={handleStatusCycle}
-                  className="px-3 py-1 text-xs border border-border text-muted hover:text-text hover:border-muted"
-                >
-                  CYCLE STATUS
-                </button>
-              )}
               <button
                 onClick={handleDeleteEntry}
                 className="px-3 py-1 text-xs border border-dropped text-dropped hover:bg-dropped hover:text-bg"
