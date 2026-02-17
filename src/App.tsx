@@ -449,6 +449,12 @@ function App() {
     }
   }
 
+  const handleQuickDelete = async (entry: MediaEntry) => {
+    await remove(entry.id)
+    setShowSaved(true)
+    setTimeout(() => setShowSaved(false), 1500)
+  }
+
   const handleStatusCycle = async () => {
     if (!selectedEntry) return
     const statusOrder: MediaEntry['status'][] = ['planned', 'in_progress', 'paused', 'completed', 'dropped']
@@ -559,6 +565,7 @@ function App() {
           onEntryClick={handleEntryClick}
           currentList={currentList}
           onAddEntry={handleQuickAdd}
+          onDeleteEntry={handleQuickDelete}
         />
       </div>
 

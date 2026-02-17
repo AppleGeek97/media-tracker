@@ -5,6 +5,7 @@ interface MediaColumnsProps {
   onEntryClick: (entry: MediaEntry) => void
   currentList: ListType
   onAddEntry?: (type: MediaType) => void
+  onDeleteEntry?: (entry: MediaEntry) => void
 }
 
 const columns: { type: MediaType; label: string; color: string }[] = [
@@ -21,7 +22,7 @@ const hoverColors: Record<MediaType, string> = {
   comic: 'hover:text-comic',
 }
 
-export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry }: MediaColumnsProps) {
+export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry, onDeleteEntry }: MediaColumnsProps) {
   const getEntriesByType = (type: MediaType) =>
     entries.filter((e) => e.type === type)
 
@@ -38,43 +39,56 @@ export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry }:
           </div>
           <div className="flex-1 overflow-y-auto min-h-0">
             {getEntriesByType(type).map((entry) => (
-              <button
-                key={entry.id}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEntryClick(entry)
-                }}
-                className={`w-full text-left px-4 py-2 border-b border-border/50 hover:bg-panel group ${hoverColors[type]}`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs ${
-                    entry.status === 'planned' ? 'text-planned' :
-                    entry.status === 'in_progress' ? 'text-inprogress' :
-                    entry.status === 'paused' ? 'text-paused' :
-                    entry.status === 'dropped' ? 'text-dropped' :
-                    'text-completed'
-                  }`}>*</span>
-                  <span className="text-text text-sm truncate group-hover:inherit flex-1">
-                    {entry.title}
-                  </span>
-                </div>
-                <div className="text-dim text-xs ml-4">
-                  {currentList === 'futurelog' ? (entry.releaseDate || 'No date') : (
-                    <>
-                      {entry.year} · <span className={
-                        entry.status === 'planned' ? 'text-planned' :
-                        entry.status === 'in_progress' ? 'text-inprogress' :
-                        entry.status === 'paused' ? 'text-paused' :
-                        entry.status === 'dropped' ? 'text-dropped' :
-                        'text-completed'
-                      }>{entry.status.replace('_', ' ').toUpperCase()}</span>
-                      {entry.status === 'completed' && entry.completedAt && (
-                        <span> · {entry.completedAt}</span>
-                      )}
-                    </>
-                  )}
-                </div>
-              </button>
+              <div key={entry.id} className="relative group/entry">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEntryClick(entry)
+                  }}
+                  className={`w-full text-left px-4 py-2 border-b border-border/50 hover:bg-panel ${hoverColors[type]}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs ${
+                      entry.status === 'planned' ? 'text-planned' :
+                      entry.status === 'in_progress' ? 'text-inprogress' :
+                      entry.status === 'paused' ? 'text-paused' :
+                      entry.status === 'dropped' ? 'text-dropped' :
+                      'text-completed'
+                    }`}>*</span>
+                    <span className="text-text text-sm truncate flex-1">
+                      {entry.title}
+                    </span>
+                  </div>
+                  <div className="text-dim text-xs ml-4">
+                    {currentList === 'futurelog' ? (entry.releaseDate || 'No date') : (
+                      <>
+                        {entry.year} · <span className={
+                          entry.status === 'planned' ? 'text-planned' :
+                          entry.status === 'in_progress' ? 'text-inprogress' :
+                          entry.status === 'paused' ? 'text-paused' :
+                          entry.status === 'dropped' ? 'text-dropped' :
+                          'text-completed'
+                        }>{entry.status.replace('_', ' ').toUpperCase()}</span>
+                        {entry.status === 'completed' && entry.completedAt && (
+                          <span> · {entry.completedAt}</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </button>
+                {onDeleteEntry && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDeleteEntry(entry)
+                    }}
+                    className="absolute top-1/2 -translate-y-1/2 right-2 opacity-0 group-hover/entry:opacity-100 text-dim hover:text-dropped text-xs px-1.5 py-0.5 bg-bg border border-border hover:border-dropped/50 transition-opacity"
+                    title="Delete entry"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             ))}
             {getEntriesByType(type).length === 0 && (
               <div className="px-4 py-8 text-dim text-xs text-center">
