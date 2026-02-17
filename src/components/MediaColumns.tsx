@@ -26,12 +26,12 @@ export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry }:
     entries.filter((e) => e.type === type)
 
   return (
-    <div className="flex-1 grid grid-cols-4 gap-px bg-border">
+    <div className="flex-1 grid grid-cols-4 gap-px bg-border h-full overflow-hidden">
       {columns.map(({ type, label, color }) => (
         <button
           key={type}
           onClick={() => onAddEntry?.(type)}
-          className={`bg-bg flex flex-col ${onAddEntry ? 'hover:bg-panel/30 cursor-pointer' : ''} transition-colors`}
+          className={`bg-bg flex flex-col h-full ${onAddEntry ? 'hover:bg-panel/30 cursor-pointer' : ''} transition-colors`}
         >
           <div className={`px-4 py-3 border-b ${color}`}>
             <span className="text-xs">{label}</span>
