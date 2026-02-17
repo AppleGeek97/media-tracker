@@ -455,6 +455,13 @@ function App() {
     setTimeout(() => setShowSaved(false), 1500)
   }
 
+  const handleTypeChange = async (entry: MediaEntry, newType: MediaEntry['type']) => {
+    await update(entry.id, { type: newType })
+    setSelectedEntry({ ...entry, type: newType })
+    setShowSaved(true)
+    setTimeout(() => setShowSaved(false), 1500)
+  }
+
   const handleStatusCycle = async () => {
     if (!selectedEntry) return
     const statusOrder: MediaEntry['status'][] = ['planned', 'in_progress', 'paused', 'completed', 'dropped']
@@ -585,10 +592,20 @@ function App() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80" onClick={handleCloseDetail} />
           <div className="relative w-full max-w-sm border border-border bg-bg">
-            <div className="px-4 py-2 border-b border-border">
+            <div className="px-4 py-2 border-b border-border flex items-center justify-between">
               <span className={`text-xs ${getTypeColor(selectedEntry.type)}`}>
                 {selectedEntry.type.toUpperCase()}
               </span>
+              <select
+                value={selectedEntry.type}
+                onChange={(e) => handleTypeChange(selectedEntry, e.target.value as MediaEntry['type'])}
+                className="text-xs bg-bg border border-border text-text px-2 py-1"
+              >
+                <option value="movie">MOVIE</option>
+                <option value="tv">TV SHOW</option>
+                <option value="game">GAME</option>
+                <option value="comic">COMIC</option>
+              </select>
             </div>
 
             <div className="p-4 space-y-3">
