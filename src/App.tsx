@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { Settings } from 'lucide-react'
 import { InputBar } from './components/InputBar'
 import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
 import { CalendarView } from './components/CalendarView'
+import { SettingsModal } from './components/SettingsModal'
 import { useMediaEntries } from './hooks/useMediaEntries'
 import type { MediaEntry, ListType } from './types'
 
@@ -145,7 +147,7 @@ function ListToggle({ currentList, onToggle }: { currentList: ListType; onToggle
   )
 }
 
-function ThemeToggle({ isDayTheme, onToggle }: { isDayTheme: boolean; onToggle: () => void }) {
+function ThemeToggle({ isDayTheme, onToggle, onOpenSettings }: { isDayTheme: boolean; onToggle: () => void; onOpenSettings: () => void }) {
   return (
     <div className="fixed top-4 left-4 z-50 flex gap-2">
       <button
@@ -173,6 +175,13 @@ function ThemeToggle({ isDayTheme, onToggle }: { isDayTheme: boolean; onToggle: 
           </svg>
         )}
       </button>
+      <button
+        onClick={onOpenSettings}
+        className="p-2 border border-border text-muted hover:text-text hover:border-muted"
+        title="Settings"
+      >
+        <Settings width={14} height={14} />
+      </button>
     </div>
   )
 }
@@ -185,6 +194,7 @@ function App() {
   const [currentList, setCurrentList] = useState<ListType>('backlog')
   const { entries, loading, add, update, remove } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [isDayTheme, setIsDayTheme] = useState(() => {
     return localStorage.getItem('jefflog-theme') === 'day'
   })
@@ -322,7 +332,7 @@ function App() {
 
   return (
     <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'mr-72' : ''}`}>
-      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} />
+      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} onOpenSettings={() => setShowSettings(true)} />
 
       {/* Calendar Toggle */}
       <button
@@ -490,6 +500,9 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Settings Modal */}
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import type { MediaEntry, ListType } from '../types'
 import * as api from './api'
 import { isAuthenticated, clearTokens } from './auth'
+import * as gist from './gist'
 
 const BACKLOG_KEY = 'media-logbook-backlog'
 const FUTURELOG_KEY = 'media-logbook-futurelog'
@@ -160,6 +161,12 @@ export const addEntry = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'use
     entries.push(newEntry)
     saveEntries(entries, listType)
     notifyListeners(listType)
+
+    // Sync to gist if enabled (non-blocking)
+    if (gist.isGistEnabled()) {
+      syncToGist().catch(console.error)
+    }
+
     return newEntry
   }
 }
@@ -191,6 +198,11 @@ export const updateEntry = async (id: string, updates: Partial<MediaEntry>, list
       entries[index] = { ...entries[index], ...safeUpdates }
       saveEntries(entries, listType)
       notifyListeners(listType)
+
+      // Sync to gist if enabled (non-blocking)
+      if (gist.isGistEnabled()) {
+        syncToGist().catch(console.error)
+      }
     }
   }
 }
@@ -216,5 +228,92 @@ export const deleteEntry = async (id: string, listType: ListType) => {
     const filtered = entries.filter((e) => e.id !== id)
     saveEntries(filtered, listType)
     notifyListeners(listType)
+
+    // Sync to gist if enabled
+    if (gist.isGistEnabled()) {
+      syncToGist().catch(console.error)
+    }
+  }
+}
+
+// Gist sync functions
+export const syncToGist = async (): Promise<{ success: boolean; error?: string }> => {
+  if (!gist.isGistEnabled()) {
+    return { success: false, error: 'Gist sync not enabled' }
+  }
+
+  const token = gist.getGitHubToken()
+  if (!token) {
+    return { success: false, error: 'No GitHub token found' }
+  }
+
+  try {
+    const backlog = loadEntries('backlog')
+    const futurelog = loadEntries('futurelog')
+    const gistId = gist.getGistId()
+
+    if (gistId) {
+      const result = await gist.updateGist(token, gistId, backlog, futurelog)
+      if (result.success) {
+        gist.setSyncPending(false)
+      }
+      return result
+    } else {
+      const result = await gist.createGist(token, backlog, futurelog)
+      if (result.success && result.gistId) {
+        gist.setGistId(result.gistId)
+        gist.setSyncPending(false)
+      }
+      return result
+    }
+  } catch (error) {
+    gist.setSyncPending(true)
+    return { success: false, error: 'Sync failed. Changes will sync when connection is restored.' }
+  }
+}
+
+export const syncFromGist = async (): Promise<{ success: boolean; error?: string }> => {
+  if (!gist.isGistEnabled()) {
+    return { success: false, error: 'Gist sync not enabled' }
+  }
+
+  const token = gist.getGitHubToken()
+  const gistId = gist.getGistId()
+
+  if (!token || !gistId) {
+    return { success: false, error: 'Gist not configured' }
+  }
+
+  try {
+    const result = await gist.fetchGist(token, gistId)
+    if (result.success && result.data) {
+      const localBacklog = loadEntries('backlog')
+      const localFuturelog = loadEntries('futurelog')
+
+      const merged = gist.mergeGistData(localBacklog, localFuturelog, result.data)
+
+      saveEntries(merged.backlog, 'backlog')
+      saveEntries(merged.futurelog, 'futurelog')
+
+      notifyListeners('backlog')
+      notifyListeners('futurelog')
+
+      return { success: true }
+    }
+    return result
+  } catch (error) {
+    return { success: false, error: 'Failed to sync from gist' }
+  }
+}
+
+export const initializeGistSync = async (): Promise<void> => {
+  if (gist.isGistEnabled() && gist.getGistId()) {
+    // Pull from gist on app load
+    await syncFromGist()
+  }
+
+  // If sync was pending (offline changes), try to sync now
+  if (gist.isSyncPending()) {
+    await syncToGist()
   }
 }

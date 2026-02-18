@@ -4,6 +4,7 @@ import {
   addEntry,
   updateEntry,
   deleteEntry,
+  initializeGistSync,
 } from '../lib/storage'
 import type { MediaEntry, SortField, Filters, ListType } from '../types'
 
@@ -13,6 +14,11 @@ export function useMediaEntries(listType: ListType) {
   const [sortField, setSortField] = useState<SortField>('title')
   const [filters, setFilters] = useState<Filters>({ type: 'all', status: 'all' })
   const [refreshKey, setRefreshKey] = useState(0)
+
+  // Initialize gist sync on mount (only once)
+  useEffect(() => {
+    initializeGistSync().catch(console.error)
+  }, [])
 
   useEffect(() => {
     setLoading(true)
