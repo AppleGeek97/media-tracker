@@ -263,7 +263,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
 
           {/* Developer Setup Notice */}
-          {gist.GITHUB_CLIENT_ID === 'YOUR_CLIENT_ID_HERE' && (
+          {gist.GITHUB_CLIENT_ID.includes('YOUR_CLIENT_ID_HERE') && (
             <div className="p-3 border border-dropped/50 bg-panel space-y-2">
               <div className="flex items-center gap-2 text-dropped text-xs font-semibold">
                 <AlertTriangle width={12} height={12} />
@@ -274,8 +274,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </p>
               <ol className="text-xs text-muted space-y-1 list-decimal list-inside">
                 <li>Go to github.com/settings/applications/new</li>
-                <li>Homepage URL: https://media-tracker.vercel.app</li>
-                <li>Callback URL: https://media-tracker.vercel.app/auth/callback</li>
+                <li>Homepage URL: https://jefflog.vercel.app</li>
+                <li>Callback URL: https://jefflog.vercel.app/auth/callback</li>
                 <li>Copy Client ID to GITHUB_CLIENT_ID in src/lib/gist.ts</li>
               </ol>
             </div>

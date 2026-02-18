@@ -4,19 +4,17 @@
  * GitHub OAuth Setup Script
  *
  * This script helps you set up GitHub OAuth for the Media Logbook app.
- * It will:
- * 1. Check if GITHUB_CLIENT_ID is configured
- * 2. Guide you through creating a GitHub OAuth App
- * 3. Update the configuration file with your Client ID
- * 4. Validate the setup
  */
 
-const fs = require('fs');
-const path = require('path');
-const readline = require('readline');
+import fs from 'fs';
+import path from 'path';
+import readline from 'readline';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const GIST_FILE = path.join(__dirname, '../src/lib/gist.ts');
-const ENV_FILE = path.join(__dirname, '../.env.local');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -67,7 +65,6 @@ async function checkCurrentConfig() {
   printStep(1, 'Checking Current Configuration');
 
   const gistContent = fs.readFileSync(GIST_FILE, 'utf8');
-  const hasClientId = gistContent.includes('GITHUB_CLIENT_ID');
   const isConfigured = gistContent.match(/GITHUB_CLIENT_ID = '([^']+)'/);
   const currentClientId = isConfigured ? isConfigured[1] : null;
 
@@ -97,13 +94,13 @@ async function guideOAuthCreation() {
 
   console.log('2. Fill in the form:');
   console.log('   • Application name: Media Logbook');
-  console.log('   • Homepage URL: https://media-tracker.vercel.app');
+  console.log('   • Homepage URL: https://jefflog.vercel.app');
   console.log('   • Authorization callback URL:');
-  console.log('     https://media-tracker.vercel.app/auth/callback\n');
+  console.log('     https://jefflog.vercel.app/auth/callback\n');
 
   console.log('3. Click "Register application"\n');
 
-  const ready = await question('Press Enter when you have created the OAuth App...');
+  await question('Press Enter when you have created the OAuth App...');
 
   return true;
 }
@@ -123,7 +120,7 @@ async function collectClientId() {
       continue;
     }
 
-    // Basic validation - GitHub Client IDs are typically 20+ characters
+    // Basic validation
     if (clientId.length < 10) {
       printWarning('This seems short for a GitHub Client ID. Are you sure?');
       const confirm = await question('Use this ID anyway? (y/N): ');
@@ -170,7 +167,7 @@ async function validateSetup() {
   }
 }
 
-async function showNextSteps() {
+async function showNextSteps(clientId) {
   printStep(6, 'Next Steps');
 
   console.log('\n🎉 Setup complete! Here\'s what to do next:\n');
@@ -191,11 +188,10 @@ async function showNextSteps() {
   console.log('   • Keep the Callback URL matching your domain');
   console.log('   • Tokens expire after 8 hours (user must re-auth)\n');
 
-  console.log('4. For local development, add to .env.local:');
-  console.log(`   VITE_GITHUB_CLIENT_ID=${isConfigured ? isConfigured[1] : 'YOUR_CLIENT_ID'}\n`);
+  if (clientId) {
+    console.log('   Your Client ID:', clientId.substring(0, 8) + '...');
+  }
 }
-
-let isConfigured = null;
 
 async function main() {
   try {
@@ -209,7 +205,7 @@ async function main() {
     const valid = await validateSetup();
 
     if (valid) {
-      await showNextSteps();
+      await showNextSteps(clientId);
       printSuccess('\nSetup completed successfully! 🚀\n');
     } else {
       printError('\nSetup failed. Please try again.\n');

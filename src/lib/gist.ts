@@ -7,8 +7,8 @@
 //
 // SETUP REQUIRED:
 // 1. Create a GitHub OAuth App at: https://github.com/settings/applications/new
-// 2. Homepage URL: https://media-tracker.vercel.app (or your domain)
-// 3. Authorization callback URL: https://media-tracker.vercel.app/auth/callback
+// 2. Homepage URL: https://jefflog.vercel.app
+// 3. Authorization callback URL: https://jefflog.vercel.app/auth/callback
 // 4. Copy the Client ID to GITHUB_CLIENT_ID below
 //
 // SECURITY NOTES:
@@ -19,7 +19,7 @@
 // =============================================================================
 
 // GitHub OAuth Configuration
-export const GITHUB_CLIENT_ID = 'YOUR_CLIENT_ID_HERE' // TODO: Replace with actual Client ID
+export const GITHUB_CLIENT_ID = 'Ov23liB3JbXPrvJ54R2U' // TODO: Replace with actual Client ID
 export const GITHUB_OAUTH_URL = 'https://github.com/login/oauth/authorize'
 export const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 
