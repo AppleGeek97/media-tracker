@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Github, LogOut, RefreshCw, AlertTriangle, Shield } from 'lucide-react'
 import * as gist from '../lib/gist'
 import { syncToGist, syncFromGist } from '../lib/storage'
 
@@ -8,70 +8,88 @@ interface SettingsModalProps {
   onClose: () => void
 }
 
-type StatusMessage = { type: 'success' | 'error' | 'info'; message: string } | null
+type StatusMessage = { type: 'success' | 'error' | 'info' | 'warning'; message: string } | null
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const [token, setToken] = useState('')
   const [status, setStatus] = useState<StatusMessage>(null)
-  const [isValidating, setIsValidating] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const [tokenExpiry, setTokenExpiry] = useState<number | null>(null)
 
   const isEnabled = gist.isGistEnabled()
   const syncPending = gist.isSyncPending()
+  const isExpired = gist.isTokenExpired()
+  const timeUntilExpiry = gist.getTimeUntilExpiry()
 
-  const handleSaveToken = async () => {
-    if (!token.trim()) {
-      setStatus({ type: 'error', message: 'Please enter a token' })
-      return
+  // Update token expiry every second
+  useEffect(() => {
+    if (isEnabled) {
+      setTokenExpiry(gist.getTokenExpiry())
+      const interval = setInterval(() => {
+        setTokenExpiry(gist.getTokenExpiry())
+      }, 1000)
+      return () => clearInterval(interval)
     }
+  }, [isEnabled])
 
-    setIsValidating(true)
-    setStatus(null)
+  // Check for OAuth callback on mount
+  useEffect(() => {
+    const handleOAuthCallback = async () => {
+      const params = new URLSearchParams(window.location.search)
+      const code = params.get('code')
+      const state = params.get('state')
 
-    const result = await gist.validateGitHubToken(token.trim())
+      if (code && state) {
+        setStatus({ type: 'info', message: 'Exchanging authorization code for token...' })
 
-    if (result.valid) {
-      gist.setGitHubToken(token.trim())
-      setStatus({ type: 'success', message: 'Token saved! Creating gist...' })
+        const result = await gist.exchangeCodeForToken(code, state)
 
-      // Initial sync - create gist
-      const syncResult = await syncToGist()
-      if (syncResult.success) {
-        setStatus({ type: 'success', message: 'Sync enabled! Your data is now backed up to GitHub Gist.' })
-        setToken('')
-      } else {
-        // Provide helpful error messages for common issues
-        if (syncResult.error?.includes('Resource not accessible') || syncResult.error?.includes('403')) {
-          setStatus({
-            type: 'error',
-            message: 'Token lacks gist permissions. Make sure you selected the "gist" scope when creating the token. Re-create the token at github.com/settings/tokens'
-          })
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname)
+
+        if (result.success) {
+          setStatus({ type: 'success', message: 'Successfully authenticated with GitHub! Creating gist...' })
+
+          // Initial sync - create gist
+          const syncResult = await syncToGist()
+          if (syncResult.success) {
+            setStatus({ type: 'success', message: 'Sync enabled! Your data is now backed up to GitHub Gist.' })
+          } else {
+            setStatus({ type: 'error', message: syncResult.error || 'Failed to create gist' })
+          }
         } else {
-          setStatus({ type: 'error', message: syncResult.error || 'Failed to create gist' })
+          setStatus({ type: 'error', message: result.error || 'Authentication failed' })
         }
-        // Clear the invalid token
-        gist.clearGitHubToken()
       }
-    } else {
-      setStatus({ type: 'error', message: result.error || 'Invalid token' })
     }
 
-    setIsValidating(false)
+    handleOAuthCallback()
+  }, [])
+
+  const handleSignIn = async () => {
+    setStatus(null)
+    await gist.initiateOAuth()
   }
 
-  const handleDisableSync = async () => {
-    setIsDeleting(true)
+  const handleSignOut = async () => {
+    setIsSigningOut(true)
     setStatus(null)
 
     gist.clearGitHubToken()
-    setStatus({ type: 'info', message: 'Sync disabled. Your data remains in local storage.' })
-    setIsDeleting(false)
+    setStatus({ type: 'info', message: 'Signed out. Your data remains in local storage.' })
+    setIsSigningOut(false)
   }
 
   const handleSyncNow = async () => {
     setIsSyncing(true)
     setStatus(null)
+
+    // Check if token is expired
+    if (isExpired) {
+      setStatus({ type: 'warning', message: 'Token expired. Please sign in again.' })
+      setIsSyncing(false)
+      return
+    }
 
     // First pull from gist
     const pullResult = await syncFromGist()
@@ -92,14 +110,28 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setIsSyncing(false)
   }
 
+  // Format time until expiry
+  const formatTimeRemaining = (ms: number | null): string => {
+    if (!ms) return 'Unknown'
+    if (ms <= 0) return 'Expired'
+
+    const hours = Math.floor(ms / (1000 * 60 * 60))
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`
+    }
+    return `${minutes}m`
+  }
+
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
-      <div className="relative w-full max-w-md border border-border bg-bg">
+      <div className="relative w-full max-w-md border border-border bg-bg max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="px-4 py-2 border-b border-border flex items-center justify-between">
+        <div className="px-4 py-2 border-b border-border flex items-center justify-between sticky top-0 bg-bg z-10">
           <span className="text-sm text-text">SETTINGS</span>
           <button
             onClick={onClose}
@@ -111,31 +143,24 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="p-4 space-y-4">
+          {/* Security Notice */}
+          <div className="p-3 border border-tv/50 bg-panel space-y-2">
+            <div className="flex items-center gap-2 text-tv text-xs">
+              <Shield width={14} height={14} />
+              <span className="font-semibold">SECURITY NOTICE</span>
+            </div>
+            <ul className="text-xs text-muted space-y-1 list-disc list-inside">
+              <li>Tokens stored in <strong className="text-text">sessionStorage</strong> (cleared when tab closes)</li>
+              <li>Uses <strong className="text-text">OAuth + PKCE</strong> - no secrets stored</li>
+              <li>Only <strong className="text-text">gist</strong> scope requested (minimal permissions)</li>
+              <li>Tokens expire after 8 hours</li>
+            </ul>
+          </div>
+
           {/* GitHub Gist Sync Section */}
           <div className="space-y-3">
             <h3 className="text-xs text-text font-semibold">GITHUB GIST SYNC</h3>
-            <p className="text-xs text-muted">
-              Sync your entries across devices using GitHub Gist. Create a{' '}
-              <a
-                href="https://github.com/settings/tokens"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-tv hover:underline"
-              >
-                Personal Access Token
-              </a>
-              :
-            </p>
-            <ol className="text-xs text-muted space-y-1 list-decimal list-inside pl-2">
-              <li>Go to github.com/settings/tokens → "Generate new token (classic)"</li>
-              <li>Name it something like "Media Logbook"</li>
-              <li><strong className="text-text">Select only the "gist" scope</strong></li>
-              <li>Click "Generate token" and copy it</li>
-            </ol>
-            <p className="text-xs text-dim italic">
-              Important: Use "classic" token type (not fine-grained) and only check the "gist" box.
-            </p>
 
             {isEnabled ? (
               <div className="space-y-3 p-3 border border-border bg-panel">
@@ -145,48 +170,66 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     {syncPending && (
                       <span className="text-xs text-dim">(pending sync)</span>
                     )}
-                    <span className="text-xs text-completed">Enabled</span>
+                    {isExpired ? (
+                      <span className="text-xs text-dropped">Token Expired</span>
+                    ) : (
+                      <span className="text-xs text-completed">Signed In</span>
+                    )}
                   </div>
                 </div>
+
+                {/* Token expiry */}
+                {tokenExpiry && !isExpired && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted">Token expires in</span>
+                    <span className="text-xs text-text">{formatTimeRemaining(timeUntilExpiry)}</span>
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <button
                     onClick={handleSyncNow}
-                    disabled={isSyncing}
-                    className="flex-1 px-3 py-2 text-xs border border-border text-text hover:border-muted disabled:opacity-50"
+                    disabled={isSyncing || isExpired}
+                    className="flex-1 px-3 py-2 text-xs border border-border text-text hover:border-muted disabled:opacity-50 flex items-center justify-center gap-2"
                   >
+                    <RefreshCw width={12} height={12} className={isSyncing ? 'animate-spin' : ''} />
                     {isSyncing ? 'Syncing...' : 'Sync Now'}
                   </button>
                   <button
-                    onClick={handleDisableSync}
-                    disabled={isDeleting}
-                    className="px-3 py-2 text-xs border border-dropped text-dropped hover:bg-dropped hover:text-bg disabled:opacity-50"
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    className="px-3 py-2 text-xs border border-dropped text-dropped hover:bg-dropped hover:text-bg disabled:opacity-50 flex items-center gap-2"
                   >
-                    {isDeleting ? 'Disabling...' : 'Disable'}
+                    <LogOut width={12} height={12} />
+                    {isSigningOut ? 'Signing out...' : 'Sign Out'}
                   </button>
                 </div>
+
+                {/* Re-authenticate warning */}
+                {isExpired && (
+                  <div className="p-2 border border-dropped/50 text-xs text-dropped flex items-start gap-2">
+                    <AlertTriangle width={12} height={12} className="flex-shrink-0 mt-0.5" />
+                    <span>Token expired. Click "Sign Out" and sign in again to continue syncing.</span>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3 p-3 border border-border bg-panel">
-                <div>
-                  <label className="text-xs text-label block mb-1">GITHUB TOKEN</label>
-                  <input
-                    type="password"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    placeholder="ghp_..."
-                    className="w-full px-2 py-2 text-xs border border-border bg-bg text-text placeholder:text-dim"
-                    disabled={isValidating}
-                  />
-                </div>
+                <p className="text-xs text-muted">
+                  Sign in with GitHub to sync your entries across devices using private Gists.
+                </p>
 
                 <button
-                  onClick={handleSaveToken}
-                  disabled={isValidating}
-                  className="w-full px-3 py-2 text-xs border border-border text-text hover:border-muted disabled:opacity-50"
+                  onClick={handleSignIn}
+                  className="w-full px-3 py-2 text-xs border border-border text-text hover:border-muted flex items-center justify-center gap-2"
                 >
-                  {isValidating ? 'Validating...' : 'Enable Sync'}
+                  <Github width={14} height={14} />
+                  Sign in with GitHub
                 </button>
+
+                <p className="text-xs text-dim italic">
+                  You'll be redirected to GitHub to authorize this app.
+                </p>
               </div>
             )}
 
@@ -198,6 +241,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     ? 'text-completed border border-completed/50'
                     : status.type === 'error'
                     ? 'text-dropped border border-dropped/50'
+                    : status.type === 'warning'
+                    ? 'text-tv border border-tv/50'
                     : 'text-muted border border-border'
                 }`}
               >
@@ -210,12 +255,31 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <div className="pt-3 border-t border-border space-y-2">
             <h4 className="text-xs text-label">HOW IT WORKS</h4>
             <ul className="text-xs text-muted space-y-1 list-disc list-inside">
-              <li>Your data is stored in a private GitHub Gist</li>
+              <li>OAuth with PKCE for secure authentication</li>
               <li>Auto-syncs on every add/edit/delete</li>
               <li>Works offline - syncs when connection restored</li>
               <li>Last-write-wins for conflict resolution</li>
             </ul>
           </div>
+
+          {/* Developer Setup Notice */}
+          {gist.GITHUB_CLIENT_ID === 'YOUR_CLIENT_ID_HERE' && (
+            <div className="p-3 border border-dropped/50 bg-panel space-y-2">
+              <div className="flex items-center gap-2 text-dropped text-xs font-semibold">
+                <AlertTriangle width={12} height={12} />
+                <span>DEVELOPER: SETUP REQUIRED</span>
+              </div>
+              <p className="text-xs text-muted">
+                To enable OAuth, create a GitHub OAuth App:
+              </p>
+              <ol className="text-xs text-muted space-y-1 list-decimal list-inside">
+                <li>Go to github.com/settings/applications/new</li>
+                <li>Homepage URL: https://media-tracker.vercel.app</li>
+                <li>Callback URL: https://media-tracker.vercel.app/auth/callback</li>
+                <li>Copy Client ID to GITHUB_CLIENT_ID in src/lib/gist.ts</li>
+              </ol>
+            </div>
+          )}
         </div>
       </div>
     </div>

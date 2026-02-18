@@ -242,24 +242,19 @@ export const syncToGist = async (): Promise<{ success: boolean; error?: string }
     return { success: false, error: 'Gist sync not enabled' }
   }
 
-  const token = gist.getGitHubToken()
-  if (!token) {
-    return { success: false, error: 'No GitHub token found' }
-  }
-
   try {
     const backlog = loadEntries('backlog')
     const futurelog = loadEntries('futurelog')
     const gistId = gist.getGistId()
 
     if (gistId) {
-      const result = await gist.updateGist(token, gistId, backlog, futurelog)
+      const result = await gist.updateGist(gistId, backlog, futurelog)
       if (result.success) {
         gist.setSyncPending(false)
       }
       return result
     } else {
-      const result = await gist.createGist(token, backlog, futurelog)
+      const result = await gist.createGist(backlog, futurelog)
       if (result.success && result.gistId) {
         gist.setGistId(result.gistId)
         gist.setSyncPending(false)
@@ -277,15 +272,14 @@ export const syncFromGist = async (): Promise<{ success: boolean; error?: string
     return { success: false, error: 'Gist sync not enabled' }
   }
 
-  const token = gist.getGitHubToken()
   const gistId = gist.getGistId()
 
-  if (!token || !gistId) {
+  if (!gistId) {
     return { success: false, error: 'Gist not configured' }
   }
 
   try {
-    const result = await gist.fetchGist(token, gistId)
+    const result = await gist.fetchGist(gistId)
     if (result.success && result.data) {
       const localBacklog = loadEntries('backlog')
       const localFuturelog = loadEntries('futurelog')
