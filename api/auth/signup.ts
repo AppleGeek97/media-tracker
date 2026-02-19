@@ -5,8 +5,31 @@ import {
   generateRefreshToken,
   type TokenPayload,
 } from '../lib/auth.js'
+import { checkRateLimit, getClientIP } from '../lib/rate-limit.js'
 
 export async function POST(request: Request) {
+  // Rate limiting: 5 signup attempts per 15 minutes per IP
+  const clientIP = getClientIP(request)
+  const rateLimit = await checkRateLimit(`signup:${clientIP}`, 5, 15)
+
+  if (!rateLimit.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: 'Too many signup attempts. Please try again later.',
+        resetAt: rateLimit.resetAt
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': rateLimit.resetAt
+            ? Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000).toString()
+            : '900'
+        },
+      }
+    )
+  }
+
   try {
     const body = await request.json()
     const { username, password } = body
@@ -42,7 +65,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate password
+    // Validate password with strength requirements
     if (!password || typeof password !== 'string') {
       return new Response(JSON.stringify({ error: 'Password is required' }), {
         status: 400,
@@ -60,14 +83,47 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if username already exists
+    // Password strength validation: must contain uppercase, lowercase, number, and special char
+    const hasUpperCase = /[A-Z]/.test(password)
+    const hasLowerCase = /[a-z]/.test(password)
+    const hasNumber = /[0-9]/.test(password)
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      return new Response(
+        JSON.stringify({
+          error: 'Password must contain uppercase, lowercase, number, and special character'
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    }
+
+    // Common weak passwords check
+    const commonPasswords = ['password', '12345678', 'qwerty123', 'abc12345', 'monkey123', 'password123']
+    if (commonPasswords.some(common => password.toLowerCase().includes(common))) {
+      return new Response(
+        JSON.stringify({ error: 'Password is too common. Choose a stronger password.' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    }
+
+    // Check if username already exists - return generic error to prevent enumeration
     const existingUsers = await sql`
       SELECT id FROM users WHERE username = ${username}
     `
 
     if (existingUsers.length > 0) {
-      return new Response(JSON.stringify({ error: 'Username already taken' }), {
-        status: 409,
+      // Generic message - prevents username enumeration
+      return new Response(JSON.stringify({
+        error: 'If an account with this username exists, it has already been created'
+      }), {
+        status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
     }

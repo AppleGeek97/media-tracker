@@ -5,8 +5,31 @@ import {
   generateRefreshToken,
   type TokenPayload,
 } from '../lib/auth.js'
+import { checkRateLimit, getClientIP } from '../lib/rate-limit.js'
 
 export async function POST(request: Request) {
+  // Rate limiting: 10 login attempts per 15 minutes per IP
+  const clientIP = getClientIP(request)
+  const rateLimit = await checkRateLimit(`login:${clientIP}`, 10, 15)
+
+  if (!rateLimit.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: 'Too many login attempts. Please try again later.',
+        resetAt: rateLimit.resetAt
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': rateLimit.resetAt
+            ? Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000).toString()
+            : '900'
+        },
+      }
+    )
+  }
+
   try {
     const body = await request.json()
     const { username, password } = body

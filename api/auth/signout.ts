@@ -1,23 +1,50 @@
 import { sql } from '../db.js'
+import { verifyAccessToken, AuthError } from '../lib/auth.js'
 
 export async function POST(request: Request) {
+  // Authenticate request
+  let auth
   try {
-    const body = await request.json()
-    const { refresh_token } = body
-
-    if (!refresh_token) {
-      return new Response(JSON.stringify({ error: 'Refresh token is required' }), {
-        status: 400,
+    const authHeader = request.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new AuthError('Unauthorized')
+    }
+    const token = authHeader.substring(7)
+    auth = await verifyAccessToken(token)
+    if (!auth) {
+      throw new AuthError('Invalid token')
+    }
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
         headers: { 'Content-Type': 'application/json' },
       })
     }
+    throw error
+  }
 
-    // Revoke the refresh token by setting revoked_at
-    await sql`
-      UPDATE refresh_tokens
-      SET revoked_at = NOW()
-      WHERE token = ${refresh_token}
-    `
+  try {
+    const body = await request.json()
+    const { revokeAll = false } = body
+
+    if (revokeAll) {
+      // Revoke ALL refresh tokens for this user (sign out from all devices)
+      await sql`
+        UPDATE refresh_tokens
+        SET revoked_at = NOW()
+        WHERE user_id = ${auth.userId}
+      `
+    } else {
+      // Revoke only the tokens that are still valid
+      await sql`
+        UPDATE refresh_tokens
+        SET revoked_at = NOW()
+        WHERE user_id = ${auth.userId}
+        AND revoked_at IS NULL
+        AND expires_at > NOW()
+      `
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
