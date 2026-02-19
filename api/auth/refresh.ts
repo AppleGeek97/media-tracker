@@ -1,6 +1,5 @@
 import { sql } from '../db.js'
 import {
-  verifyAccessToken,
   verifyRefreshToken,
   generateAccessToken,
 } from '../lib/auth.js'

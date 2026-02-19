@@ -388,6 +388,7 @@ function App() {
           currentList={currentList}
           onAddEntry={handleQuickAdd}
           onDeleteEntry={handleQuickDelete}
+          onUpdateEntry={update}
         />
       </div>
 
