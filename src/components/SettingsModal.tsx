@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Github, LogOut, RefreshCw, AlertTriangle, Shield } from 'lucide-react'
+import { X, Github, LogOut, RefreshCw, AlertTriangle } from 'lucide-react'
 import * as gist from '../lib/gist'
 import { syncToGist, syncFromGist } from '../lib/storage'
 
@@ -144,23 +144,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
         {/* Content */}
         <div className="p-4 space-y-4">
-          {/* Security Notice */}
-          <div className="p-3 border border-tv/50 bg-panel space-y-2">
-            <div className="flex items-center gap-2 text-tv text-xs">
-              <Shield width={14} height={14} />
-              <span className="font-semibold">SECURITY NOTICE</span>
-            </div>
-            <ul className="text-xs text-muted space-y-1 list-disc list-inside">
-              <li>Tokens stored in <strong className="text-text">sessionStorage</strong> (cleared when tab closes)</li>
-              <li>Uses <strong className="text-text">OAuth + PKCE</strong> - no secrets stored</li>
-              <li>Only <strong className="text-text">gist</strong> scope requested (minimal permissions)</li>
-              <li>Tokens expire after 8 hours</li>
-            </ul>
-          </div>
-
           {/* GitHub Gist Sync Section */}
           <div className="space-y-3">
-            <h3 className="text-xs text-text font-semibold">GITHUB GIST SYNC</h3>
+            <h3 className="text-xs text-text font-semibold">GITHUB GIST BACKUP</h3>
 
             {isEnabled ? (
               <div className="space-y-3 p-3 border border-border bg-panel">
@@ -216,7 +202,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             ) : (
               <div className="space-y-3 p-3 border border-border bg-panel">
                 <p className="text-xs text-muted">
-                  Sign in with GitHub to sync your entries across devices using private Gists.
+                  Enable GitHub Gist sync to backup your entries. Great for cross-device backup and restore.
                 </p>
 
                 <button
@@ -224,11 +210,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   className="w-full px-3 py-2 text-xs border border-border text-text hover:border-muted flex items-center justify-center gap-2"
                 >
                   <Github width={14} height={14} />
-                  Sign in with GitHub
+                  Enable Gist Backup
                 </button>
 
                 <p className="text-xs text-dim italic">
-                  You'll be redirected to GitHub to authorize this app.
+                  You'll be redirected to GitHub to authorize gist access.
                 </p>
               </div>
             )}
@@ -255,10 +241,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <div className="pt-3 border-t border-border space-y-2">
             <h4 className="text-xs text-label">HOW IT WORKS</h4>
             <ul className="text-xs text-muted space-y-1 list-disc list-inside">
-              <li>OAuth with PKCE for secure authentication</li>
-              <li>Auto-syncs on every add/edit/delete</li>
+              <li>Entries stored locally in your browser</li>
+              <li>Gist sync creates automatic backups</li>
+              <li>Restore from gist on any device</li>
               <li>Works offline - syncs when connection restored</li>
-              <li>Last-write-wins for conflict resolution</li>
             </ul>
           </div>
 

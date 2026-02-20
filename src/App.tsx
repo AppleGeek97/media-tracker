@@ -5,8 +5,11 @@ import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
 import { CalendarView } from './components/CalendarView'
 import { SettingsModal } from './components/SettingsModal'
+import { PasswordModal } from './components/PasswordModal'
 import { useMediaEntries } from './hooks/useMediaEntries'
 import type { MediaEntry, ListType } from './types'
+
+const UNLOCKED_KEY = 'jefflog-unlocked'
 
 function MobileWarning() {
   return (
@@ -195,6 +198,9 @@ function App() {
   const { entries, loading, add, update, remove } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    return sessionStorage.getItem(UNLOCKED_KEY) === 'true'
+  })
   const [isDayTheme, setIsDayTheme] = useState(() => {
     return localStorage.getItem('jefflog-theme') === 'day'
   })
@@ -328,6 +334,17 @@ function App() {
 
   if (isMobile) {
     return <MobileWarning />
+  }
+
+  if (!isUnlocked) {
+    return (
+      <PasswordModal
+        onUnlock={() => {
+          sessionStorage.setItem(UNLOCKED_KEY, 'true')
+          setIsUnlocked(true)
+        }}
+      />
+    )
   }
 
   return (
