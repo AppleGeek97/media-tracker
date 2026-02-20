@@ -15,6 +15,22 @@ export function PasswordModal({ onUnlock }: PasswordModalProps) {
     setIsLoading(true)
 
     try {
+      // Check if we're in local development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        // Local dev fallback - just check against a hardcoded test password
+        // In production, this would never trigger
+        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate network delay
+
+        if (password === 'test123') {
+          onUnlock()
+        } else {
+          setError('Incorrect password (try: test123)')
+          setPassword('')
+        }
+        setIsLoading(false)
+        return
+      }
+
       const response = await fetch('/api/check-password', {
         method: 'POST',
         headers: {
