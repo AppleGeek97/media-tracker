@@ -19,7 +19,10 @@ export async function POST(request: Request) {
     const rateLimitKey = `password-check:${clientIP}`
 
     // Simple in-memory rate limiting (for production, use Redis or similar)
-    const attempts = (global as any)._passwordAttempts || (global as any)._passwordAttempts = new Map()
+    if (!(global as any)._passwordAttempts) {
+      (global as any)._passwordAttempts = new Map()
+    }
+    const attempts = (global as any)._passwordAttempts
     const now = Date.now()
     const userAttempts = attempts.get(rateLimitKey) || { count: 0, resetTime: now + 60000 }
 
