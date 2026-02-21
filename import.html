@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import LocalStorage to Database</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    .container {
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    h1 { margin-top: 0; }
+    .info {
+      background: #0a3a0a;
+      border: 1px solid #1a5a1a;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover { background: #3a8eef; }
+    button:disabled {
+      background: #3a3a3a;
+      color: #7a7a7a;
+      cursor: not-allowed;
+    }
+    .results {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success { background: #0a3a0a; border: 1px solid #1a5a1a; }
+    .error { background: #3a0a0a; border: 1px solid #5a1a1a; }
+    pre {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .count {
+      display: inline-block;
+      background: #3a3a3a;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📥 Import LocalStorage to Database</h1>
+
+    <div class="info">
+      <strong>⚠️ This will import your browser's local entries to the cloud database.</strong><br><br>
+      Your entries will be synced across all devices after import.
+    </div>
+
+    <div style="margin: 20px 0;">
+      <strong>Found in localStorage:</strong><br>
+      Backlog: <span class="count" id="backlog-count">0</span> entries<br>
+      Futurelog: <span class="count" id="futurelog-count">0</span> entries
+    </div>
+
+    <button id="import-btn" onclick="importEntries()">Import to Database</button>
+    <button onclick="showEntries()">Show Entries</button>
+
+    <div id="results" class="results" style="display: none;"></div>
+
+    <div id="entries-preview" style="display: none;">
+      <h3>Preview:</h3>
+      <pre id="entries-data"></pre>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    function getLocalEntries() {
+      const backlog = JSON.parse(localStorage.getItem('media-logbook-backlog') || '[]');
+      const futurelog = JSON.parse(localStorage.getItem('media-logbook-futurelog') || '[]');
+      return [...backlog, ...futurelog];
+    }
+
+    function updateCounts() {
+      const backlog = JSON.parse(localStorage.getItem('media-logbook-backlog') || '[]');
+      const futurelog = JSON.parse(localStorage.getItem('media-logbook-futurelog') || '[]');
+      document.getElementById('backlog-count').textContent = backlog.length;
+      document.getElementById('futurelog-count').textContent = futurelog.length;
+    }
+
+    function showEntries() {
+      const entries = getLocalEntries();
+      const preview = document.getElementById('entries-preview');
+      const data = document.getElementById('entries-data');
+      preview.style.display = entries.length > 0 ? 'block' : 'none';
+      data.textContent = JSON.stringify(entries, null, 2);
+    }
+
+    async function importEntries() {
+      const btn = document.getElementById('import-btn');
+      const results = document.getElementById('results');
+      const entries = getLocalEntries();
+
+      if (entries.length === 0) {
+        results.className = 'results error';
+        results.style.display = 'block';
+        results.textContent = '❌ No entries found in localStorage!';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Importing...';
+      results.style.display = 'none';
+
+      try {
+        const response = await fetch(`${API_BASE}/api/entries/import`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entries })
+        });
+
+        const data = await response.json();
+
+        results.className = data.success ? 'results success' : 'results error';
+        results.style.display = 'block';
+
+        if (data.success) {
+          results.innerHTML = `✅ Successfully imported <strong>${data.imported}</strong> entries!<br><br>
+            Your entries are now in the database and will sync across all devices.<br><br>
+            <strong>Next steps:</strong><br>
+            1. Refresh the main app<br>
+            2. Your entries should load from the cloud`;
+        } else {
+          results.textContent = '❌ Import failed: ' + (data.error || 'Unknown error');
+        }
+      } catch (error) {
+        results.className = 'results error';
+        results.style.display = 'block';
+        results.textContent = '❌ Import failed: ' + error.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Import to Database';
+      }
+    }
+
+    // Update counts on load
+    updateCounts();
+  </script>
+</body>
+</html>
