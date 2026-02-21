@@ -17,6 +17,7 @@ export interface MediaEntry {
   releaseDate?: string  // Format: "DD/MM/YY" - only for futurelog entries
   completedAt?: string  // Format: "DD/MM/YY" - when entry was finished (backlog)
   createdAt: Date
+  updatedAt: Date
 }
 
 export type SortField = 'title' | 'year'

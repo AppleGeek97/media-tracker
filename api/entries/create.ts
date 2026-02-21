@@ -38,6 +38,7 @@ export async function POST(request: Request) {
         entry: {
           ...entry,
           createdAt: new Date(entry.created_at),
+          updatedAt: new Date(entry.updated_at),
         },
       }),
       {

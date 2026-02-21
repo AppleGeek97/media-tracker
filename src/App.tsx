@@ -6,6 +6,7 @@ import { MediaColumns } from './components/MediaColumns'
 import { CalendarView } from './components/CalendarView'
 import { SettingsModal } from './components/SettingsModal'
 import { PasswordModal } from './components/PasswordModal'
+import { SyncIndicator } from './components/SyncIndicator'
 import { useMediaEntries } from './hooks/useMediaEntries'
 import type { MediaEntry, ListType } from './types'
 
@@ -150,7 +151,7 @@ function ListToggle({ currentList, onToggle }: { currentList: ListType; onToggle
   )
 }
 
-function ThemeToggle({ isDayTheme, onToggle, onOpenSettings }: { isDayTheme: boolean; onToggle: () => void; onOpenSettings: () => void }) {
+function ThemeToggle({ isDayTheme, onToggle, onOpenSettings, syncStatus }: { isDayTheme: boolean; onToggle: () => void; onOpenSettings: () => void; syncStatus: 'syncing' | 'synced' | 'error' }) {
   return (
     <div className="fixed top-4 left-4 z-50 flex gap-2">
       <button
@@ -185,6 +186,7 @@ function ThemeToggle({ isDayTheme, onToggle, onOpenSettings }: { isDayTheme: boo
       >
         <Settings width={14} height={14} />
       </button>
+      <SyncIndicator status={syncStatus} />
     </div>
   )
 }
@@ -195,7 +197,7 @@ function App() {
   const [showSaved, setShowSaved] = useState(false)
   const [entryCount, setEntryCount] = useState(0)
   const [currentList, setCurrentList] = useState<ListType>('backlog')
-  const { entries, loading, add, update, remove } = useMediaEntries(currentList)
+  const { entries, loading, add, update, remove, syncStatus } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [isUnlocked, setIsUnlocked] = useState(() => {
@@ -349,7 +351,7 @@ function App() {
 
   return (
     <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'mr-72' : ''}`}>
-      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} onOpenSettings={() => setShowSettings(true)} />
+      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} onOpenSettings={() => setShowSettings(true)} syncStatus={syncStatus} />
 
       {/* Calendar Toggle */}
       <button

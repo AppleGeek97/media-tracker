@@ -6,7 +6,10 @@ import {
   deleteEntry,
   initializeGistSync,
 } from '../lib/storage'
+import { startBackgroundSync, stopBackgroundSync, syncOnFocus } from '../lib/sync-manager'
 import type { MediaEntry, SortField, Filters, ListType } from '../types'
+
+export type SyncStatus = 'syncing' | 'synced' | 'error'
 
 export function useMediaEntries(listType: ListType) {
   const [entries, setEntries] = useState<MediaEntry[]>([])
@@ -14,11 +17,31 @@ export function useMediaEntries(listType: ListType) {
   const [sortField, setSortField] = useState<SortField>('title')
   const [filters, setFilters] = useState<Filters>({ type: 'all', status: 'all' })
   const [refreshKey, setRefreshKey] = useState(0)
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced')
 
   // Initialize gist sync on mount (only once)
   useEffect(() => {
     initializeGistSync().catch(console.error)
   }, [])
+
+  // Start background sync on mount
+  useEffect(() => {
+    startBackgroundSync([listType], (syncedListType, hasNewData) => {
+      setSyncStatus('synced')
+      if (hasNewData && syncedListType === listType) {
+        // Trigger re-fetch when new data arrives
+        setRefreshKey(prev => prev + 1)
+      }
+    })
+
+    // Sync on window focus
+    window.addEventListener('focus', syncOnFocus)
+
+    return () => {
+      stopBackgroundSync()
+      window.removeEventListener('focus', syncOnFocus)
+    }
+  }, [listType])
 
   useEffect(() => {
     setLoading(true)
@@ -40,7 +63,7 @@ export function useMediaEntries(listType: ListType) {
       return b.year - a.year
     })
 
-  const add = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId'>) => {
+  const add = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId' | 'updatedAt'>) => {
     await addEntry(entry)
   }
 
@@ -59,6 +82,7 @@ export function useMediaEntries(listType: ListType) {
   return {
     entries: filteredEntries,
     loading,
+    syncStatus,
     sortField,
     setSortField,
     filters,

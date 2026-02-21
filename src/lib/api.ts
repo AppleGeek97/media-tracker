@@ -35,7 +35,7 @@ export async function fetchEntries(
 
 // Create a new media entry
 export async function createEntry(
-  entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId'>
+  entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId' | 'updatedAt'>
 ): Promise<CreateEntryResponse> {
   try {
     const res = await fetchWrapper(`${API_BASE}/entries/create`, {

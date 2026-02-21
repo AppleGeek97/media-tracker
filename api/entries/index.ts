@@ -25,6 +25,7 @@ export async function GET(request: Request) {
         entries: entries.map((e: any) => ({
           ...e,
           createdAt: new Date(e.created_at),
+          updatedAt: new Date(e.updated_at),
         })),
       }),
       {

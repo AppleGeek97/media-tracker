@@ -55,22 +55,23 @@ export const migrateToSeparateStorage = () => {
   localStorage.setItem(MIGRATED_KEY, 'true')
 }
 
-const loadEntries = (listType: ListType): MediaEntry[] => {
+export const loadEntries = (listType: ListType): MediaEntry[] => {
   const key = getStorageKey(listType)
   const data = localStorage.getItem(key)
   if (!data) return []
   try {
     const parsed = JSON.parse(data)
-    return parsed.map((e: MediaEntry & { createdAt: string }) => ({
+    return parsed.map((e: MediaEntry & { createdAt: string; updatedAt: string }) => ({
       ...e,
       createdAt: new Date(e.createdAt),
+      updatedAt: new Date(e.updatedAt),
     }))
   } catch {
     return []
   }
 }
 
-const saveEntries = (entries: MediaEntry[], listType: ListType) => {
+export const saveEntries = (entries: MediaEntry[], listType: ListType) => {
   const key = getStorageKey(listType)
   localStorage.setItem(key, JSON.stringify(entries))
 }
@@ -87,6 +88,12 @@ const notifyListeners = (listType: ListType) => {
   const entries = loadEntries(listType)
   listenersByList[listType].forEach((cb) => cb(entries))
 }
+
+// Listen for sync events from sync-manager
+window.addEventListener('media-entries-synced', ((event: CustomEvent) => {
+  const detail = event.detail as { listType: ListType }
+  notifyListeners(detail.listType)
+}) as EventListener)
 
 // Sync entries from cloud to local cache
 export const syncEntriesFromCloud = async (listType: ListType) => {
@@ -120,7 +127,7 @@ export const subscribeToEntries = (
   }
 }
 
-export const addEntry = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId'>) => {
+export const addEntry = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId' | 'updatedAt'>) => {
   const listType = entry.list
 
   // Use API for all operations in single-user mode
