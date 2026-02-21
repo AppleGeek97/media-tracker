@@ -1,20 +1,8 @@
 import { sql } from '../db.js'
-import { requireAuth, AuthError } from '../lib/auth.js'
+import { getSingleUserId } from '../lib/single-user.js'
 
 export async function POST(request: Request) {
-  // Authenticate request using JWT
-  let auth
-  try {
-    auth = await requireAuth(request)
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-    throw error
-  }
+  const userId = await getSingleUserId()
 
   try {
     const body = await request.json()
@@ -59,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     values.push(id)
-    values.push(auth.userId) // Add authenticated userId for ownership verification
+    values.push(userId) // Add userId for ownership verification
     const query = `UPDATE media_entries SET ${fields.join(', ')} WHERE id = $${values.length - 1} AND user_id = $${values.length} RETURNING *`
 
     const result = await sql.query(query, values)

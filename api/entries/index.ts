@@ -1,20 +1,8 @@
 import { sql } from '../db.js'
-import { requireAuth, AuthError } from '../lib/auth.js'
+import { getSingleUserId } from '../lib/single-user.js'
 
 export async function GET(request: Request) {
-  // Authenticate request using JWT
-  let auth
-  try {
-    auth = await requireAuth(request)
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-    throw error
-  }
+  const userId = await getSingleUserId()
 
   const url = new URL(request.url)
   const listType = url.searchParams.get('list')
@@ -29,7 +17,7 @@ export async function GET(request: Request) {
   try {
     const entries = await sql`
       SELECT * FROM media_entries
-      WHERE user_id = ${auth.userId} AND list_type = ${listType}
+      WHERE user_id = ${userId} AND list_type = ${listType}
       ORDER BY created_at DESC
     `
     return new Response(

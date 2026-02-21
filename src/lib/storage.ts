@@ -1,7 +1,5 @@
 import type { MediaEntry, ListType } from '../types'
 import * as api from './api'
-import { isAuthenticated, clearTokens } from './auth'
-import * as gist from './gist'
 
 const BACKLOG_KEY = 'media-logbook-backlog'
 const FUTURELOG_KEY = 'media-logbook-futurelog'
@@ -19,15 +17,9 @@ export const getLocalUserId = (): string => {
   return userId
 }
 
-// Check if user is using cloud storage (authenticated)
+// Always use cloud API for single-user mode
 export const isCloudUser = (): boolean => {
-  return isAuthenticated()
-}
-
-// Sign out (clear cloud user tokens)
-export const signOut = async () => {
-  await api.authSignout()
-  clearTokens()
+  return true // Always use API for single-user mode
 }
 
 const getStorageKey = (listType: ListType): string => {
@@ -110,12 +102,8 @@ export const subscribeToEntries = (
   listType: ListType,
   callback: (entries: MediaEntry[]) => void
 ) => {
-  const isCloud = isCloudUser()
-
-  // Sync from cloud if cloud user
-  if (isCloud) {
-    syncEntriesFromCloud(listType).catch(console.error)
-  }
+  // Sync from cloud on mount (single-user mode always uses cloud)
+  syncEntriesFromCloud(listType).catch(console.error)
 
   const wrappedCallback = (entries: MediaEntry[]) => {
     // Sort entries by creation date (newest first)
@@ -134,180 +122,52 @@ export const subscribeToEntries = (
 
 export const addEntry = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId'>) => {
   const listType = entry.list
-  const isCloud = isCloudUser()
 
-  if (isCloud) {
-    // Use API for cloud users (userId added automatically from JWT)
-    const result = await api.createEntry(entry)
-    if (result.entry) {
-      // Update local cache
-      const entries = loadEntries(listType)
-      entries.push(result.entry)
-      saveEntries(entries, listType)
-      notifyListeners(listType)
-      return result.entry
-    }
-    throw new Error(result.error || 'Failed to create entry')
-  } else {
-    // Use localStorage for local users (need to add userId)
+  // Use API for all operations in single-user mode
+  const result = await api.createEntry(entry)
+  if (result.entry) {
+    // Update local cache
     const entries = loadEntries(listType)
-    const userId = getLocalUserId()
-    const newEntry: MediaEntry = {
-      ...entry,
-      userId,
-      id: crypto.randomUUID(),
-      createdAt: new Date(),
-    }
-    entries.push(newEntry)
+    entries.push(result.entry)
     saveEntries(entries, listType)
     notifyListeners(listType)
-
-    // Sync to gist if enabled (non-blocking)
-    if (gist.isGistEnabled()) {
-      syncToGist().catch(console.error)
-    }
-
-    return newEntry
+    return result.entry
   }
+  throw new Error(result.error || 'Failed to create entry')
 }
 
 export const updateEntry = async (id: string, updates: Partial<MediaEntry>, listType: ListType) => {
-  const isCloud = isCloudUser()
-
-  if (isCloud) {
-    // Use API for cloud users
-    const result = await api.updateEntry(id, updates)
-    if (result.entry) {
-      // Update local cache
-      const entries = loadEntries(listType)
-      const index = entries.findIndex((e) => e.id === id)
-      if (index !== -1) {
-        entries[index] = result.entry
-        saveEntries(entries, listType)
-        notifyListeners(listType)
-      }
-      return
-    }
-    throw new Error(result.error || 'Failed to update entry')
-  } else {
-    // Use localStorage for local users
+  // Use API for all operations in single-user mode
+  const result = await api.updateEntry(id, updates)
+  if (result.entry) {
+    // Update local cache
     const entries = loadEntries(listType)
     const index = entries.findIndex((e) => e.id === id)
     if (index !== -1) {
-      const { id: _, createdAt: __, ...safeUpdates } = updates as MediaEntry
-      entries[index] = { ...entries[index], ...safeUpdates }
+      entries[index] = result.entry
       saveEntries(entries, listType)
       notifyListeners(listType)
-
-      // Sync to gist if enabled (non-blocking)
-      if (gist.isGistEnabled()) {
-        syncToGist().catch(console.error)
-      }
     }
+    return
   }
+  throw new Error(result.error || 'Failed to update entry')
 }
 
 export const deleteEntry = async (id: string, listType: ListType) => {
-  const isCloud = isCloudUser()
-
-  if (isCloud) {
-    // Use API for cloud users
-    const result = await api.deleteEntry(id)
-    if (result.success) {
-      // Update local cache
-      const entries = loadEntries(listType)
-      const filtered = entries.filter((e) => e.id !== id)
-      saveEntries(filtered, listType)
-      notifyListeners(listType)
-      return
-    }
-    throw new Error(result.error || 'Failed to delete entry')
-  } else {
-    // Use localStorage for local users
+  // Use API for all operations in single-user mode
+  const result = await api.deleteEntry(id)
+  if (result.success) {
+    // Update local cache
     const entries = loadEntries(listType)
     const filtered = entries.filter((e) => e.id !== id)
     saveEntries(filtered, listType)
     notifyListeners(listType)
-
-    // Sync to gist if enabled
-    if (gist.isGistEnabled()) {
-      syncToGist().catch(console.error)
-    }
+    return
   }
+  throw new Error(result.error || 'Failed to delete entry')
 }
 
-// Gist sync functions
-export const syncToGist = async (): Promise<{ success: boolean; error?: string }> => {
-  if (!gist.isGistEnabled()) {
-    return { success: false, error: 'Gist sync not enabled' }
-  }
-
-  try {
-    const backlog = loadEntries('backlog')
-    const futurelog = loadEntries('futurelog')
-    const gistId = gist.getGistId()
-
-    if (gistId) {
-      const result = await gist.updateGist(gistId, backlog, futurelog)
-      if (result.success) {
-        gist.setSyncPending(false)
-      }
-      return result
-    } else {
-      const result = await gist.createGist(backlog, futurelog)
-      if (result.success && result.gistId) {
-        gist.setGistId(result.gistId)
-        gist.setSyncPending(false)
-      }
-      return result
-    }
-  } catch (error) {
-    gist.setSyncPending(true)
-    return { success: false, error: 'Sync failed. Changes will sync when connection is restored.' }
-  }
-}
-
-export const syncFromGist = async (): Promise<{ success: boolean; error?: string }> => {
-  if (!gist.isGistEnabled()) {
-    return { success: false, error: 'Gist sync not enabled' }
-  }
-
-  const gistId = gist.getGistId()
-
-  if (!gistId) {
-    return { success: false, error: 'Gist not configured' }
-  }
-
-  try {
-    const result = await gist.fetchGist(gistId)
-    if (result.success && result.data) {
-      const localBacklog = loadEntries('backlog')
-      const localFuturelog = loadEntries('futurelog')
-
-      const merged = gist.mergeGistData(localBacklog, localFuturelog, result.data)
-
-      saveEntries(merged.backlog, 'backlog')
-      saveEntries(merged.futurelog, 'futurelog')
-
-      notifyListeners('backlog')
-      notifyListeners('futurelog')
-
-      return { success: true }
-    }
-    return result
-  } catch (error) {
-    return { success: false, error: 'Failed to sync from gist' }
-  }
-}
-
+// No-op for single-user mode (keep for compatibility)
 export const initializeGistSync = async (): Promise<void> => {
-  if (gist.isGistEnabled() && gist.getGistId()) {
-    // Pull from gist on app load
-    await syncFromGist()
-  }
-
-  // If sync was pending (offline changes), try to sync now
-  if (gist.isSyncPending()) {
-    await syncToGist()
-  }
+  // No gist sync in single-user mode
 }

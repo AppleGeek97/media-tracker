@@ -1,20 +1,8 @@
 import { sql } from '../db.js'
-import { requireAuth, AuthError } from '../lib/auth.js'
+import { getSingleUserId } from '../lib/single-user.js'
 
 export async function POST(request: Request) {
-  // Authenticate request using JWT
-  let auth
-  try {
-    auth = await requireAuth(request)
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-    throw error
-  }
+  const userId = await getSingleUserId()
 
   try {
     const body = await request.json()
@@ -30,7 +18,7 @@ export async function POST(request: Request) {
     const result = await sql`
       INSERT INTO media_entries (user_id, title, type, status, year, list_type, seasons_completed, cover_url, release_date, completed_at)
       VALUES (
-        ${auth.userId},
+        ${userId},
         ${title},
         ${type},
         ${status},
