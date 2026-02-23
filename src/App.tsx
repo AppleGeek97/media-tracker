@@ -239,8 +239,9 @@ function App() {
     }
   }, [entries.length, loading, entryCount])
 
-  const handleAddEntry = async (entry: { title: string; type: MediaEntry['type']; status: MediaEntry['status']; year: number; list: ListType; releaseDate?: string }) => {
-    await add({
+  const handleAddEntry = (entry: { title: string; type: MediaEntry['type']; status: MediaEntry['status']; year: number; list: ListType; releaseDate?: string }) => {
+    // Don't await - let optimistic update show immediately
+    add({
       ...entry,
       seasonsCompleted: entry.type === 'tv' ? 0 : undefined,
       releaseDate: entry.releaseDate,
@@ -256,8 +257,9 @@ function App() {
     comic: 'New Comic',
   }
 
-  const handleQuickAdd = async (type: MediaEntry['type']) => {
-    await add({
+  const handleQuickAdd = (type: MediaEntry['type']) => {
+    // Don't await - let optimistic update show immediately
+    add({
       title: placeholderTitles[type],
       type,
       status: 'planned',
@@ -302,32 +304,38 @@ function App() {
     setSelectedEntry(null)
   }
 
-  const handleDeleteEntry = async () => {
+  const handleDeleteEntry = () => {
     if (selectedEntry) {
-      await remove(selectedEntry.id)
+      const id = selectedEntry.id
       setSelectedEntry(null)
+      // Don't await - let optimistic update show immediately
+      remove(id)
       setShowSaved(true)
       setTimeout(() => setShowSaved(false), 1500)
     }
   }
 
-  const handleQuickDelete = async (entry: MediaEntry) => {
-    await remove(entry.id)
+  const handleQuickDelete = (entry: MediaEntry) => {
+    // Don't await - let optimistic update show immediately
+    remove(entry.id)
     setShowSaved(true)
     setTimeout(() => setShowSaved(false), 1500)
   }
 
-  const handleTypeChange = async (entry: MediaEntry, newType: MediaEntry['type']) => {
-    await update(entry.id, { type: newType })
+  const handleTypeChange = (entry: MediaEntry, newType: MediaEntry['type']) => {
+    // Optimistic UI update
     setSelectedEntry({ ...entry, type: newType })
+    // Don't await - let optimistic update show immediately
+    update(entry.id, { type: newType })
     setShowSaved(true)
     setTimeout(() => setShowSaved(false), 1500)
   }
 
   // Update local state after successful save
-  const handleSaveField = async (field: string, value: any) => {
+  const handleSaveField = (field: string, value: any) => {
     if (selectedEntry) {
-      await update(selectedEntry.id, { [field]: value })
+      // Don't await - let optimistic update show immediately
+      update(selectedEntry.id, { [field]: value })
       setShowSaved(true)
       setTimeout(() => setShowSaved(false), 1500)
     }
