@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { MediaEntry, ListType } from '../types'
 
 interface TimelineProps {
@@ -15,7 +16,7 @@ function parseReleaseYear(dateStr: string): number | null {
   return year
 }
 
-export function Timeline({ entries, selectedYear, onYearSelect, currentList }: TimelineProps) {
+const TimelineInner = function TimelineInner({ entries, selectedYear, onYearSelect, currentList }: TimelineProps) {
   const isFuturelog = currentList === 'futurelog'
 
   let years: number[] = []
@@ -75,3 +76,5 @@ export function Timeline({ entries, selectedYear, onYearSelect, currentList }: T
     </div>
   )
 }
+
+export const Timeline = memo(TimelineInner)

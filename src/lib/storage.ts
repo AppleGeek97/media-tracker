@@ -61,10 +61,12 @@ export const loadEntries = (listType: ListType): MediaEntry[] => {
   if (!data) return []
   try {
     const parsed = JSON.parse(data)
-    return parsed.map((e: MediaEntry & { createdAt: string; updatedAt: string }) => ({
+    return parsed.map((e: any) => ({
       ...e,
-      createdAt: new Date(e.createdAt),
-      updatedAt: new Date(e.updatedAt),
+      // Map list_type to list
+      list: e.list_type || e.list || listType,
+      createdAt: new Date(e.createdAt || e.created_at),
+      updatedAt: new Date(e.updatedAt || e.updated_at),
     }))
   } catch {
     return []
@@ -112,66 +114,122 @@ export const subscribeToEntries = (
   // Sync from cloud on mount (single-user mode always uses cloud)
   syncEntriesFromCloud(listType).catch(console.error)
 
-  const wrappedCallback = (entries: MediaEntry[]) => {
-    // Sort entries by creation date (newest first)
-    const sortedEntries = entries
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    callback(sortedEntries)
-  }
-
-  listenersByList[listType].push(wrappedCallback)
-  wrappedCallback(loadEntries(listType))
+  listenersByList[listType].push(callback)
+  callback(loadEntries(listType))
 
   return () => {
-    listenersByList[listType] = listenersByList[listType].filter((cb) => cb !== wrappedCallback)
+    listenersByList[listType] = listenersByList[listType].filter((cb) => cb !== callback)
   }
 }
 
 export const addEntry = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId' | 'updatedAt'>) => {
   const listType = entry.list
 
-  // Use API for all operations in single-user mode
+  // Generate temporary optimistic entry
+  const tempId = 'temp-' + crypto.randomUUID()
+  const now = new Date()
+  const optimisticEntry: MediaEntry = {
+    ...entry,
+    id: tempId,
+    createdAt: now,
+    updatedAt: now,
+    userId: getLocalUserId(),
+  }
+
+  // Update local cache immediately (optimistic)
+  const entries = loadEntries(listType)
+  entries.push(optimisticEntry)
+  saveEntries(entries, listType)
+
+  // Make API call
   const result = await api.createEntry(entry)
   if (result.entry) {
-    // Update local cache
-    const entries = loadEntries(listType)
-    entries.push(result.entry)
-    saveEntries(entries, listType)
+    // Replace optimistic entry with real one in a single pass
+    const currentEntries = loadEntries(listType)
+    const index = currentEntries.findIndex((e) => e.id === tempId)
+    if (index !== -1) {
+      currentEntries[index] = result.entry
+    }
+    saveEntries(currentEntries, listType)
+    // Single notify after API response (includes optimistic update)
     notifyListeners(listType)
     return result.entry
+  } else {
+    // Revert on error
+    const currentEntries = loadEntries(listType)
+    const filtered = currentEntries.filter((e) => e.id !== tempId)
+    saveEntries(filtered, listType)
+    notifyListeners(listType)
+    throw new Error(result.error || 'Failed to create entry')
   }
-  throw new Error(result.error || 'Failed to create entry')
 }
 
 export const updateEntry = async (id: string, updates: Partial<MediaEntry>, listType: ListType) => {
-  // Use API for all operations in single-user mode
+  // Store previous state for potential rollback
+  const entries = loadEntries(listType)
+  const index = entries.findIndex((e) => e.id === id)
+  if (index === -1) {
+    throw new Error('Entry not found')
+  }
+  const previousEntry = entries[index]
+
+  // Optimistic update
+  const optimisticEntry = { ...previousEntry, ...updates, updatedAt: new Date() }
+  entries[index] = optimisticEntry
+  saveEntries(entries, listType)
+
+  // Make API call
   const result = await api.updateEntry(id, updates)
   if (result.entry) {
-    // Update local cache
-    const entries = loadEntries(listType)
-    const index = entries.findIndex((e) => e.id === id)
-    if (index !== -1) {
-      entries[index] = result.entry
-      saveEntries(entries, listType)
-      notifyListeners(listType)
+    // Update with server response
+    const currentEntries = loadEntries(listType)
+    const idx = currentEntries.findIndex((e) => e.id === id)
+    if (idx !== -1) {
+      currentEntries[idx] = result.entry
     }
+    saveEntries(currentEntries, listType)
+    // Single notify after API response
+    notifyListeners(listType)
     return
+  } else {
+    // Revert on error
+    const currentEntries = loadEntries(listType)
+    const idx = currentEntries.findIndex((e) => e.id === id)
+    if (idx !== -1) {
+      currentEntries[idx] = previousEntry
+    }
+    saveEntries(currentEntries, listType)
+    notifyListeners(listType)
+    throw new Error(result.error || 'Failed to update entry')
   }
-  throw new Error(result.error || 'Failed to update entry')
 }
 
 export const deleteEntry = async (id: string, listType: ListType) => {
-  // Use API for all operations in single-user mode
+  // Store previous state for potential rollback
+  const entries = loadEntries(listType)
+  const entryToDelete = entries.find((e) => e.id === id)
+  if (!entryToDelete) {
+    throw new Error('Entry not found')
+  }
+
+  // Optimistic delete
+  const filtered = entries.filter((e) => e.id !== id)
+  saveEntries(filtered, listType)
+
+  // Make API call
   const result = await api.deleteEntry(id)
   if (result.success) {
-    // Update local cache
-    const entries = loadEntries(listType)
-    const filtered = entries.filter((e) => e.id !== id)
-    saveEntries(filtered, listType)
+    // Single notify after API response
     notifyListeners(listType)
     return
+  } else {
+    // Revert on error
+    const currentEntries = loadEntries(listType)
+    currentEntries.push(entryToDelete)
+    saveEntries(currentEntries, listType)
+    notifyListeners(listType)
+    throw new Error(result.error || 'Failed to delete entry')
   }
-  throw new Error(result.error || 'Failed to delete entry')
 }
 
 // No-op for single-user mode (keep for compatibility)

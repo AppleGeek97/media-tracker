@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import type { MediaEntry, ListType } from '../types'
 import { Film, Tv, Gamepad2, BookOpen } from 'lucide-react'
 
@@ -49,59 +50,64 @@ function getTypeColor(type: string) {
   }
 }
 
-export function CalendarView({ entries, onEntryClick, currentList }: CalendarViewProps) {
+const CalendarViewInner = function CalendarViewInner({ entries, onEntryClick, currentList }: CalendarViewProps) {
   const isFuturelog = currentList === 'futurelog'
 
-  // Separate entries with and without dates
-  const withDates: { entry: MediaEntry; date: Date }[] = []
-  const withoutDates: MediaEntry[] = []
+  // Memoize expensive grouping/sorting computations
+  const { withDates, withoutDates, groups } = useMemo(() => {
+    // Separate entries with and without dates
+    const withDatesResult: { entry: MediaEntry; date: Date }[] = []
+    const withoutDatesResult: MediaEntry[] = []
 
-  entries.forEach(entry => {
-    if (isFuturelog) {
-      // Futurelog: use releaseDate
-      if (entry.releaseDate) {
-        const date = parseReleaseDate(entry.releaseDate)
-        if (date) {
-          withDates.push({ entry, date })
+    entries.forEach(entry => {
+      if (isFuturelog) {
+        // Futurelog: use releaseDate
+        if (entry.releaseDate) {
+          const date = parseReleaseDate(entry.releaseDate)
+          if (date) {
+            withDatesResult.push({ entry, date })
+          } else {
+            withoutDatesResult.push(entry)
+          }
         } else {
-          withoutDates.push(entry)
+          withoutDatesResult.push(entry)
         }
       } else {
-        withoutDates.push(entry)
-      }
-    } else {
-      // Backlog: use completedAt, fall back to year for completed entries
-      if (entry.completedAt) {
-        const date = parseReleaseDate(entry.completedAt)
-        if (date) {
-          withDates.push({ entry, date })
+        // Backlog: use completedAt, fall back to year for completed entries
+        if (entry.completedAt) {
+          const date = parseReleaseDate(entry.completedAt)
+          if (date) {
+            withDatesResult.push({ entry, date })
+          }
+        } else if (entry.status === 'completed' && entry.year) {
+          // Use year as a date placeholder (January 1st of that year)
+          const date = new Date(entry.year, 0, 1)
+          withDatesResult.push({ entry, date })
+        } else if (entry.status === 'completed') {
+          withoutDatesResult.push(entry)
         }
-      } else if (entry.status === 'completed' && entry.year) {
-        // Use year as a date placeholder (January 1st of that year)
-        const date = new Date(entry.year, 0, 1)
-        withDates.push({ entry, date })
-      } else if (entry.status === 'completed') {
-        withoutDates.push(entry)
       }
-    }
-  })
+    })
 
-  // Sort by date: ascending for futurelog (upcoming), descending for backlog (recent first)
-  if (isFuturelog) {
-    withDates.sort((a, b) => a.date.getTime() - b.date.getTime())
-  } else {
-    withDates.sort((a, b) => b.date.getTime() - a.date.getTime())
-  }
-
-  // Group by month/year for futurelog, by year for backlog
-  const groups: Map<string, { entry: MediaEntry; date: Date }[]> = new Map()
-  withDates.forEach(item => {
-    const key = isFuturelog ? formatMonthYear(item.date) : formatYear(item.date)
-    if (!groups.has(key)) {
-      groups.set(key, [])
+    // Sort by date: ascending for futurelog (upcoming), descending for backlog (recent first)
+    if (isFuturelog) {
+      withDatesResult.sort((a, b) => a.date.getTime() - b.date.getTime())
+    } else {
+      withDatesResult.sort((a, b) => b.date.getTime() - a.date.getTime())
     }
-    groups.get(key)!.push(item)
-  })
+
+    // Group by month/year for futurelog, by year for backlog
+    const groupsResult: Map<string, { entry: MediaEntry; date: Date }[]> = new Map()
+    withDatesResult.forEach(item => {
+      const key = isFuturelog ? formatMonthYear(item.date) : formatYear(item.date)
+      if (!groupsResult.has(key)) {
+        groupsResult.set(key, [])
+      }
+      groupsResult.get(key)!.push(item)
+    })
+
+    return { withDates: withDatesResult, withoutDates: withoutDatesResult, groups: groupsResult }
+  }, [entries, isFuturelog])
 
   return (
     <div className="h-full overflow-y-auto overscroll-contain p-4 pt-16 border-l border-border">
@@ -171,3 +177,5 @@ export function CalendarView({ entries, onEntryClick, currentList }: CalendarVie
     </div>
   )
 }
+
+export const CalendarView = memo(CalendarViewInner)

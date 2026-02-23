@@ -1,7 +1,10 @@
 /**
- * Simple password check endpoint
- * Validates password server-side to keep it secure from client inspection
+ * Password check endpoint with JWT token generation
+ * Validates password server-side and returns a JWT token for authenticated requests
  */
+
+import { generateAccessToken } from './lib/auth.js'
+import { getSingleUserId } from './lib/single-user.js'
 
 const correctPassword = process.env.SITE_PASSWORD
 
@@ -11,14 +14,14 @@ if (!correctPassword) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
+    const body = await request.json() as { password?: string }
     const { password } = body
 
     // Rate limiting: 20 attempts per minute per IP
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitKey = `password-check:${clientIP}`
 
-    // Simple in-memory rate limiting (for production, use Redis or similar)
+    // Simple in-memory rate limiting (works within serverless function instance)
     if (!(global as any)._passwordAttempts) {
       (global as any)._passwordAttempts = new Map()
     }
@@ -55,8 +58,15 @@ export async function POST(request: Request) {
       // Reset attempts on success
       attempts.delete(rateLimitKey)
 
+      // Get user ID and generate JWT token
+      const userId = await getSingleUserId()
+      const token = await generateAccessToken({
+        userId,
+        username: 'user'
+      })
+
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ success: true, token }),
         {
           status: 200,
           headers: { 'Content-Type': 'application/json' }

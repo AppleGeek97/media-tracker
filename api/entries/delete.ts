@@ -1,11 +1,25 @@
 import { sql } from '../db.js'
-import { getSingleUserId } from '../lib/single-user.js'
+import { requireAuth, AuthError } from '../lib/auth.js'
 
 export async function POST(request: Request) {
-  const userId = await getSingleUserId()
+  // Verify JWT token
+  let auth
+  try {
+    auth = await requireAuth(request)
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    throw error
+  }
+
+  const userId = auth.userId
 
   try {
-    const body = await request.json()
+    const body = await request.json() as { id?: string }
     const { id } = body
 
     if (!id) {

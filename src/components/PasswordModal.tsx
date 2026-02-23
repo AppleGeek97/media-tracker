@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+const AUTH_TOKEN_KEY = 'jefflog-auth-token'
+
 interface PasswordModalProps {
   onUnlock: () => void
 }
@@ -15,22 +17,6 @@ export function PasswordModal({ onUnlock }: PasswordModalProps) {
     setIsLoading(true)
 
     try {
-      // Check if we're in local development
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        // Local dev fallback - just check against a hardcoded test password
-        // In production, this would never trigger
-        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate network delay
-
-        if (password === 'test123') {
-          onUnlock()
-        } else {
-          setError('Incorrect password (try: test123)')
-          setPassword('')
-        }
-        setIsLoading(false)
-        return
-      }
-
       const response = await fetch('/api/check-password', {
         method: 'POST',
         headers: {
@@ -41,7 +27,9 @@ export function PasswordModal({ onUnlock }: PasswordModalProps) {
 
       const data = await response.json()
 
-      if (data.success) {
+      if (data.success && data.token) {
+        // Store JWT token in sessionStorage (cleared on browser close)
+        sessionStorage.setItem(AUTH_TOKEN_KEY, data.token)
         onUnlock()
       } else {
         setError(data.error || 'Incorrect password')
@@ -92,4 +80,12 @@ export function PasswordModal({ onUnlock }: PasswordModalProps) {
       </div>
     </div>
   )
+}
+
+export function getAuthToken(): string | null {
+  return sessionStorage.getItem(AUTH_TOKEN_KEY)
+}
+
+export function clearAuthToken(): void {
+  sessionStorage.removeItem(AUTH_TOKEN_KEY)
 }

@@ -1,6 +1,7 @@
 import type { MediaEntry, ListType } from '../types'
 
 const API_BASE = '/api'
+const AUTH_TOKEN_KEY = 'jefflog-auth-token'
 
 export interface FetchEntriesResponse {
   entries: (MediaEntry & { createdAt: Date })[]
@@ -13,10 +14,42 @@ export interface CreateEntryResponse {
 }
 
 /**
- * Simple fetch wrapper (no auth needed for single-user mode)
+ * Fetch wrapper with JWT authentication
+ * Adds Authorization header with token from sessionStorage
  */
 async function fetchWrapper(url: string, options?: RequestInit): Promise<Response> {
-  return fetch(url, options)
+  const token = sessionStorage.getItem(AUTH_TOKEN_KEY)
+
+  const headers = {
+    ...options?.headers,
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  })
+
+  // Only reload if we had a token that became invalid (expired session)
+  // Don't reload if we never had a token (user not logged in yet)
+  if (response.status === 401 && token) {
+    sessionStorage.removeItem(AUTH_TOKEN_KEY)
+    sessionStorage.removeItem('jefflog-unlocked')
+    window.location.reload() // Force reload to show password screen
+  }
+
+  return response
+}
+
+// Normalize entry from API format to frontend format
+function normalizeEntry(entry: any): MediaEntry {
+  return {
+    ...entry,
+    // Map snake_case to camelCase
+    list: entry.list_type || entry.list,
+    createdAt: new Date(entry.createdAt || entry.created_at),
+    updatedAt: new Date(entry.updatedAt || entry.updated_at),
+  }
 }
 
 // Fetch entries for authenticated user and list type
@@ -26,6 +59,12 @@ export async function fetchEntries(
   try {
     const res = await fetchWrapper(`${API_BASE}/entries?list=${listType}`)
     const data = await res.json()
+
+    // Normalize entries from API format
+    if (data.entries) {
+      data.entries = data.entries.map(normalizeEntry)
+    }
+
     return data
   } catch (error) {
     console.error('Fetch entries error:', error)
@@ -54,6 +93,12 @@ export async function createEntry(
       }),
     })
     const data = await res.json()
+
+    // Normalize the created entry
+    if (data.entry) {
+      data.entry = normalizeEntry(data.entry)
+    }
+
     return data
   } catch (error) {
     console.error('Create entry error:', error)
@@ -73,6 +118,12 @@ export async function updateEntry(
       body: JSON.stringify({ id, updates }),
     })
     const data = await res.json()
+
+    // Normalize the updated entry
+    if (data.entry) {
+      data.entry = normalizeEntry(data.entry)
+    }
+
     return data
   } catch (error) {
     console.error('Update entry error:', error)

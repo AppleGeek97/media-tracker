@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   subscribeToEntries,
   addEntry,
@@ -53,15 +53,18 @@ export function useMediaEntries(listType: ListType) {
     return unsubscribe
   }, [listType, refreshKey])
 
-  const filteredEntries = entries
-    .filter((e) => filters.type === 'all' || e.type === filters.type)
-    .filter((e) => filters.status === 'all' || e.status === filters.status)
-    .sort((a, b) => {
-      if (sortField === 'title') {
-        return a.title.localeCompare(b.title)
-      }
-      return b.year - a.year
-    })
+  // Memoize filtered/sorted entries to avoid re-computation on every render
+  const filteredEntries = useMemo(() => {
+    return entries
+      .filter((e) => filters.type === 'all' || e.type === filters.type)
+      .filter((e) => filters.status === 'all' || e.status === filters.status)
+      .sort((a, b) => {
+        if (sortField === 'title') {
+          return a.title.localeCompare(b.title)
+        }
+        return b.year - a.year
+      })
+  }, [entries, filters, sortField])
 
   const add = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId' | 'updatedAt'>) => {
     await addEntry(entry)

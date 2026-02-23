@@ -1,8 +1,22 @@
 import { sql } from '../db.js'
-import { getSingleUserId } from '../lib/single-user.js'
+import { requireAuth, AuthError } from '../lib/auth.js'
 
 export async function GET(request: Request) {
-  const userId = await getSingleUserId()
+  // Verify JWT token
+  let auth
+  try {
+    auth = await requireAuth(request)
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    throw error
+  }
+
+  const userId = auth.userId
   const url = new URL(request.url)
   const listType = url.searchParams.get('list')
   const since = url.searchParams.get('since')

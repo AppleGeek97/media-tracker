@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Settings } from 'lucide-react'
 import { InputBar } from './components/InputBar'
 import { Timeline } from './components/Timeline'
@@ -11,6 +11,7 @@ import { useMediaEntries } from './hooks/useMediaEntries'
 import type { MediaEntry, ListType } from './types'
 
 const UNLOCKED_KEY = 'jefflog-unlocked'
+const AUTH_TOKEN_KEY = 'jefflog-auth-token'
 
 function MobileWarning() {
   return (
@@ -201,7 +202,16 @@ function App() {
   const [showCalendar, setShowCalendar] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [isUnlocked, setIsUnlocked] = useState(() => {
-    return sessionStorage.getItem(UNLOCKED_KEY) === 'true'
+    // Check if user has a valid auth token (new method) or legacy unlocked flag
+    const hasAuthToken = !!sessionStorage.getItem(AUTH_TOKEN_KEY)
+    const wasUnlocked = sessionStorage.getItem(UNLOCKED_KEY) === 'true'
+
+    // If we have an unlocked flag but no token, clear the old flag
+    if (wasUnlocked && !hasAuthToken) {
+      sessionStorage.removeItem(UNLOCKED_KEY)
+    }
+
+    return hasAuthToken || wasUnlocked
   })
   const [isDayTheme, setIsDayTheme] = useState(() => {
     return localStorage.getItem('jefflog-theme') === 'day'
@@ -235,7 +245,6 @@ function App() {
       seasonsCompleted: entry.type === 'tv' ? 0 : undefined,
       releaseDate: entry.releaseDate,
     })
-    setEntryCount(entries.length + 1)
     setShowSaved(true)
     setTimeout(() => setShowSaved(false), 1500)
   }
@@ -256,7 +265,6 @@ function App() {
       list: currentList,
       seasonsCompleted: type === 'tv' ? 0 : undefined,
     })
-    setEntryCount(entries.length + 1)
     setShowSaved(true)
     setTimeout(() => setShowSaved(false), 1500)
   }
@@ -267,22 +275,24 @@ function App() {
     setSelectedTime(null)
   }
 
-  // Filter entries by selected time
-  const filteredEntries = selectedTime
-    ? entries.filter((e) => {
-        if (currentList === 'futurelog') {
-          // Filter by release year
-          if (!e.releaseDate) return false
-          const parts = e.releaseDate.split('/')
-          if (parts.length !== 3) return false
-          let year = parseInt(parts[2], 10)
-          if (year < 100) year += year < 50 ? 2000 : 1900
-          return year === selectedTime
-        } else {
-          return e.year === selectedTime
-        }
-      })
-    : entries
+  // Filter entries by selected time (memoized)
+  const filteredEntries = useMemo(() => {
+    if (!selectedTime) return entries
+
+    return entries.filter((e) => {
+      if (currentList === 'futurelog') {
+        // Filter by release year
+        if (!e.releaseDate) return false
+        const parts = e.releaseDate.split('/')
+        if (parts.length !== 3) return false
+        let year = parseInt(parts[2], 10)
+        if (year < 100) year += year < 50 ? 2000 : 1900
+        return year === selectedTime
+      } else {
+        return e.year === selectedTime
+      }
+    })
+  }, [entries, selectedTime, currentList])
 
   const handleEntryClick = (entry: MediaEntry) => {
     setSelectedEntry(entry)
@@ -314,6 +324,15 @@ function App() {
     setTimeout(() => setShowSaved(false), 1500)
   }
 
+  // Update local state after successful save
+  const handleSaveField = async (field: string, value: any) => {
+    if (selectedEntry) {
+      await update(selectedEntry.id, { [field]: value })
+      setShowSaved(true)
+      setTimeout(() => setShowSaved(false), 1500)
+    }
+  }
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'movie': return 'text-movie'
@@ -342,6 +361,7 @@ function App() {
     return (
       <PasswordModal
         onUnlock={() => {
+          // The auth token is now stored in PasswordModal component
           sessionStorage.setItem(UNLOCKED_KEY, 'true')
           setIsUnlocked(true)
         }}
@@ -450,7 +470,7 @@ function App() {
                   type="text"
                   value={selectedEntry.title}
                   onChange={(e) => setSelectedEntry({ ...selectedEntry, title: e.target.value })}
-                  onBlur={() => update(selectedEntry.id, { title: selectedEntry.title })}
+                  onBlur={() => handleSaveField('title', selectedEntry.title)}
                   className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
                 />
               </div>
@@ -461,9 +481,12 @@ function App() {
                       <label className="text-label text-xs block mb-1">YEAR</label>
                       <input
                         type="number"
-                        value={selectedEntry.year}
-                        onChange={(e) => setSelectedEntry({ ...selectedEntry, year: parseInt(e.target.value) || new Date().getFullYear() })}
-                        onBlur={() => update(selectedEntry.id, { year: selectedEntry.year })}
+                        value={selectedEntry.year || ''}
+                        onChange={(e) => {
+                          const year = parseInt(e.target.value) || new Date().getFullYear()
+                          setSelectedEntry({ ...selectedEntry, year })
+                        }}
+                        onBlur={() => handleSaveField('year', selectedEntry.year)}
                         className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
                       />
                     </div>
@@ -474,7 +497,7 @@ function App() {
                         onChange={(e) => {
                           const newStatus = e.target.value as MediaEntry['status']
                           setSelectedEntry({ ...selectedEntry, status: newStatus })
-                          update(selectedEntry.id, { status: newStatus })
+                          handleSaveField('status', newStatus)
                         }}
                         className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
                       >
@@ -494,7 +517,7 @@ function App() {
                       type="text"
                       value={selectedEntry.releaseDate || ''}
                       onChange={(e) => setSelectedEntry({ ...selectedEntry, releaseDate: e.target.value })}
-                      onBlur={() => update(selectedEntry.id, { releaseDate: selectedEntry.releaseDate })}
+                      onBlur={() => handleSaveField('releaseDate', selectedEntry.releaseDate)}
                       placeholder="DD/MM/YYYY"
                       className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
                     />

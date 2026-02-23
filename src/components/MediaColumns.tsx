@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -61,7 +61,7 @@ interface DroppableColumnProps {
   onDeleteEntry?: (entry: MediaEntry) => void
 }
 
-function DroppableColumn({ type, label, color, entries, currentList, onEntryClick, onAddEntry, onDeleteEntry }: DroppableColumnProps) {
+const DroppableColumn = memo(function DroppableColumn({ type, label, color, entries, currentList, onEntryClick, onAddEntry, onDeleteEntry }: DroppableColumnProps) {
   const { setNodeRef } = useDroppable({
     id: type,
   })
@@ -100,9 +100,9 @@ function DroppableColumn({ type, label, color, entries, currentList, onEntryClic
       </div>
     </div>
   )
-}
+})
 
-function DraggableEntry({ entry, currentList, onEntryClick, onDeleteEntry }: DraggableEntryProps) {
+const DraggableEntry = memo(function DraggableEntry({ entry, currentList, onEntryClick, onDeleteEntry }: DraggableEntryProps) {
   const {
     attributes,
     listeners,
@@ -120,20 +120,24 @@ function DraggableEntry({ entry, currentList, onEntryClick, onDeleteEntry }: Dra
 
   return (
     <div ref={setNodeRef} style={style} className="relative group/entry">
-      <button
+      <div
         {...attributes}
-        {...listeners}
-        onClick={(e) => {
-          e.stopPropagation()
-          onEntryClick(entry)
-        }}
-        className={`w-full text-left px-4 py-2 border-b border-border/50 hover:bg-panel ${hoverColors[entry.type]}`}
+        className={`w-full text-left border-b border-border/50 hover:bg-panel ${hoverColors[entry.type]}`}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-text text-sm truncate flex-1">
-            {entry.title}
-          </span>
-        </div>
+        <button
+          {...listeners}
+          onClick={(e) => {
+            e.stopPropagation()
+            onEntryClick(entry)
+          }}
+          className="w-full text-left px-4 py-2"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-text text-sm truncate flex-1">
+              {entry.title}
+            </span>
+          </div>
+        </button>
         <div className="text-dim text-xs ml-4">
           {currentList === 'futurelog' ? (entry.releaseDate || 'No date') : (
             <>
@@ -144,18 +148,14 @@ function DraggableEntry({ entry, currentList, onEntryClick, onDeleteEntry }: Dra
                 entry.status === 'dropped' ? 'text-dropped' :
                 'text-completed'
               }>{entry.status.replace('_', ' ').toUpperCase()}</span>
-              {(entry.status === 'completed' || entry.status === 'dropped') && (
-                <>
-                  <span> · {entry.year}</span>
-                  {entry.status === 'completed' && entry.completedAt && (
-                    <span> · {entry.completedAt}</span>
-                  )}
-                </>
+              <span> · {entry.year}</span>
+              {entry.status === 'completed' && entry.completedAt && (
+                <span> · {entry.completedAt}</span>
               )}
             </>
           )}
         </div>
-      </button>
+      </div>
       {onDeleteEntry && (
         <button
           onClick={(e) => {
@@ -170,9 +170,9 @@ function DraggableEntry({ entry, currentList, onEntryClick, onDeleteEntry }: Dra
       )}
     </div>
   )
-}
+})
 
-export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry, onDeleteEntry, onUpdateEntry }: MediaColumnsProps) {
+const MediaColumnsInner = function MediaColumnsInner({ entries, onEntryClick, currentList, onAddEntry, onDeleteEntry, onUpdateEntry }: MediaColumnsProps) {
   const [items, setItems] = useState<MediaEntry[]>(entries)
   const [activeId, setActiveId] = useState<string | null>(null)
 
@@ -277,3 +277,5 @@ export function MediaColumns({ entries, onEntryClick, currentList, onAddEntry, o
     </div>
   )
 }
+
+export const MediaColumns = memo(MediaColumnsInner)
