@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Settings } from 'lucide-react'
 import { InputBar } from './components/InputBar'
 import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
 import { CalendarView } from './components/CalendarView'
-import { SettingsModal } from './components/SettingsModal'
 import { PasswordModal } from './components/PasswordModal'
 import { SyncIndicator } from './components/SyncIndicator'
 import { useMediaEntries } from './hooks/useMediaEntries'
@@ -152,7 +150,7 @@ function ListToggle({ currentList, onToggle }: { currentList: ListType; onToggle
   )
 }
 
-function ThemeToggle({ isDayTheme, onToggle, onOpenSettings, syncStatus }: { isDayTheme: boolean; onToggle: () => void; onOpenSettings: () => void; syncStatus: 'syncing' | 'synced' | 'error' }) {
+function ThemeToggle({ isDayTheme, onToggle, syncStatus }: { isDayTheme: boolean; onToggle: () => void; syncStatus: 'syncing' | 'synced' | 'error' }) {
   return (
     <div className="fixed top-4 left-4 z-50 flex gap-2">
       <button
@@ -180,13 +178,6 @@ function ThemeToggle({ isDayTheme, onToggle, onOpenSettings, syncStatus }: { isD
           </svg>
         )}
       </button>
-      <button
-        onClick={onOpenSettings}
-        className="p-2 border border-border text-muted hover:text-text hover:border-muted"
-        title="Settings"
-      >
-        <Settings width={14} height={14} />
-      </button>
       <SyncIndicator status={syncStatus} />
     </div>
   )
@@ -200,7 +191,6 @@ function App() {
   const [currentList, setCurrentList] = useState<ListType>('backlog')
   const { entries, loading, add, update, remove, syncStatus } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
   const [isUnlocked, setIsUnlocked] = useState(() => {
     // Check if user has a valid auth token (new method) or legacy unlocked flag
     const hasAuthToken = !!sessionStorage.getItem(AUTH_TOKEN_KEY)
@@ -379,7 +369,7 @@ function App() {
 
   return (
     <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'mr-72' : ''}`}>
-      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} onOpenSettings={() => setShowSettings(true)} syncStatus={syncStatus} />
+      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} />
 
       {/* Calendar Toggle */}
       <button
@@ -551,9 +541,6 @@ function App() {
           </div>
         </div>
       )}
-
-      {/* Settings Modal */}
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   )
 }
