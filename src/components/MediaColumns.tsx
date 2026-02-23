@@ -122,14 +122,14 @@ const DraggableEntry = memo(function DraggableEntry({ entry, currentList, onEntr
     <div ref={setNodeRef} style={style} className="relative group/entry">
       <div
         {...attributes}
+        onClick={(e) => {
+          e.stopPropagation()
+          onEntryClick(entry)
+        }}
         className={`w-full text-left border-b border-border/50 hover:bg-panel px-4 py-2 ${hoverColors[entry.type]}`}
       >
         <button
           {...listeners}
-          onClick={(e) => {
-            e.stopPropagation()
-            onEntryClick(entry)
-          }}
           className="w-full text-left -mx-4 -my-2 px-4 py-2"
         >
           <div className="flex items-center gap-2">
