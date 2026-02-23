@@ -122,7 +122,7 @@ const DraggableEntry = memo(function DraggableEntry({ entry, currentList, onEntr
     <div ref={setNodeRef} style={style} className="relative group/entry">
       <div
         {...attributes}
-        className={`w-full text-left border-b border-border/50 hover:bg-panel ${hoverColors[entry.type]}`}
+        className={`w-full text-left border-b border-border/50 hover:bg-panel px-4 py-2 ${hoverColors[entry.type]}`}
       >
         <button
           {...listeners}
@@ -130,7 +130,7 @@ const DraggableEntry = memo(function DraggableEntry({ entry, currentList, onEntr
             e.stopPropagation()
             onEntryClick(entry)
           }}
-          className="w-full text-left px-4 py-2"
+          className="w-full text-left -mx-4 -my-2 px-4 py-2"
         >
           <div className="flex items-center gap-2">
             <span className="text-text text-sm truncate flex-1">
@@ -138,7 +138,7 @@ const DraggableEntry = memo(function DraggableEntry({ entry, currentList, onEntr
             </span>
           </div>
         </button>
-        <div className="text-dim text-xs ml-4">
+        <div className="text-dim text-xs">
           {currentList === 'futurelog' ? (entry.releaseDate || 'No date') : (
             <>
               <span className={
