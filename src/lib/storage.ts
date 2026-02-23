@@ -136,23 +136,26 @@ export const addEntry = async (entry: Omit<MediaEntry, 'id' | 'createdAt' | 'use
     userId: getLocalUserId(),
   }
 
-  // Update local cache immediately (optimistic)
+  // Update local cache immediately (optimistic) - instant feedback
   const entries = loadEntries(listType)
   entries.push(optimisticEntry)
   saveEntries(entries, listType)
+  notifyListeners(listType) // Immediate update
 
   // Make API call
   const result = await api.createEntry(entry)
   if (result.entry) {
-    // Replace optimistic entry with real one in a single pass
+    // Replace optimistic entry with real one
     const currentEntries = loadEntries(listType)
     const index = currentEntries.findIndex((e) => e.id === tempId)
     if (index !== -1) {
       currentEntries[index] = result.entry
+      saveEntries(currentEntries, listType)
     }
-    saveEntries(currentEntries, listType)
-    // Single notify after API response (includes optimistic update)
-    notifyListeners(listType)
+    // Defer second notify to avoid interrupting the first render
+    requestAnimationFrame(() => {
+      notifyListeners(listType)
+    })
     return result.entry
   } else {
     // Revert on error
@@ -173,10 +176,11 @@ export const updateEntry = async (id: string, updates: Partial<MediaEntry>, list
   }
   const previousEntry = entries[index]
 
-  // Optimistic update
+  // Optimistic update - instant feedback
   const optimisticEntry = { ...previousEntry, ...updates, updatedAt: new Date() }
   entries[index] = optimisticEntry
   saveEntries(entries, listType)
+  notifyListeners(listType) // Immediate update
 
   // Make API call
   const result = await api.updateEntry(id, updates)
@@ -186,10 +190,12 @@ export const updateEntry = async (id: string, updates: Partial<MediaEntry>, list
     const idx = currentEntries.findIndex((e) => e.id === id)
     if (idx !== -1) {
       currentEntries[idx] = result.entry
+      saveEntries(currentEntries, listType)
     }
-    saveEntries(currentEntries, listType)
-    // Single notify after API response
-    notifyListeners(listType)
+    // Defer second notify to avoid interrupting the first render
+    requestAnimationFrame(() => {
+      notifyListeners(listType)
+    })
     return
   } else {
     // Revert on error
@@ -212,15 +218,14 @@ export const deleteEntry = async (id: string, listType: ListType) => {
     throw new Error('Entry not found')
   }
 
-  // Optimistic delete
+  // Optimistic delete - instant feedback
   const filtered = entries.filter((e) => e.id !== id)
   saveEntries(filtered, listType)
+  notifyListeners(listType) // Immediate update
 
   // Make API call
   const result = await api.deleteEntry(id)
   if (result.success) {
-    // Single notify after API response
-    notifyListeners(listType)
     return
   } else {
     // Revert on error
