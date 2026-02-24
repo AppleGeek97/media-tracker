@@ -59,6 +59,12 @@ export function useMediaEntries(listType: ListType) {
       .filter((e) => filters.type === 'all' || e.type === filters.type)
       .filter((e) => filters.status === 'all' || e.status === filters.status)
       .sort((a, b) => {
+        // Always sort by creation time first (newest last), then by secondary field
+        // This ensures new entries added via click appear at the bottom
+        const createdCompare = a.createdAt.getTime() - b.createdAt.getTime()
+        if (createdCompare !== 0) return createdCompare
+
+        // Secondary sort by the selected field
         if (sortField === 'title') {
           return a.title.localeCompare(b.title)
         }
