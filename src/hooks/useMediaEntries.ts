@@ -55,16 +55,28 @@ export function useMediaEntries(listType: ListType) {
 
   // Memoize filtered/sorted entries to avoid re-computation on every render
   const filteredEntries = useMemo(() => {
+    // Define status priority order
+    const statusPriority: Record<string, number> = {
+      'in_progress': 0,
+      'paused': 1,
+      'planned': 2,
+      'completed': 3,
+      'dropped': 4,
+    }
+
     return entries
       .filter((e) => filters.type === 'all' || e.type === filters.type)
       .filter((e) => filters.status === 'all' || e.status === filters.status)
       .sort((a, b) => {
-        // Always sort by creation time first (newest last), then by secondary field
-        // This ensures new entries added via click appear at the bottom
+        // Primary sort by status priority (in_progress first, then paused, then planned)
+        const statusCompare = (statusPriority[a.status] ?? 99) - (statusPriority[b.status] ?? 99)
+        if (statusCompare !== 0) return statusCompare
+
+        // Secondary sort by creation time (newest last within each status group)
         const createdCompare = a.createdAt.getTime() - b.createdAt.getTime()
         if (createdCompare !== 0) return createdCompare
 
-        // Secondary sort by the selected field
+        // Tertiary sort by the selected field
         if (sortField === 'title') {
           return a.title.localeCompare(b.title)
         }
