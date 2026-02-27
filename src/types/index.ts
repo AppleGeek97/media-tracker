@@ -1,6 +1,6 @@
 export type MediaType = 'movie' | 'tv' | 'game' | 'comic'
 
-export type Status = 'planned' | 'in_progress' | 'completed' | 'paused' | 'dropped'
+export type Status = 'planned' | 'in_progress' | 'completed' | 'paused' | 'dropped' | 'replaying'
 
 export type ListType = 'backlog' | 'futurelog'
 

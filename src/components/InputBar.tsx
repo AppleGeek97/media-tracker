@@ -13,10 +13,11 @@ const mediaTypes: { value: MediaType; label: string; color: string; borderColor:
   { value: 'comic', label: 'COMIC', color: 'text-comic', borderColor: 'border-comic' },
 ]
 
-const statuses: { value: Status; label: string; color: string; borderColor: string }[] = [
+const statuses: { value: Status; label: string; color: string; borderColor: string; gameOnly?: boolean }[] = [
   { value: 'planned', label: 'PLANNED', color: 'text-planned', borderColor: 'border-planned' },
   { value: 'in_progress', label: 'IN PROGRESS', color: 'text-inprogress', borderColor: 'border-inprogress' },
   { value: 'paused', label: 'ON PAUSE', color: 'text-paused', borderColor: 'border-paused' },
+  { value: 'replaying', label: 'REPLAYING', color: 'text-replaying', borderColor: 'border-replaying', gameOnly: true },
   { value: 'completed', label: 'COMPLETED', color: 'text-completed', borderColor: 'border-completed' },
   { value: 'dropped', label: 'DROPPED', color: 'text-dropped', borderColor: 'border-dropped' },
 ]
@@ -119,7 +120,9 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
               <div className="flex items-center gap-4">
                 <span className="text-label text-xs w-16">STATUS</span>
                 <div className="flex gap-2 flex-wrap">
-                  {statuses.map(({ value, label, color, borderColor }) => (
+                  {statuses
+                    .filter((s) => !s.gameOnly || type === 'game')
+                    .map(({ value, label, color, borderColor }) => (
                     <button
                       key={value}
                       type="button"

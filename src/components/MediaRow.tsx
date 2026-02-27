@@ -18,6 +18,7 @@ const statusSymbols = {
   paused: '[|]',
   completed: '[x]',
   dropped: '[-]',
+  replaying: '[R]',
 }
 
 export function MediaRow({ entry, onClick }: MediaRowProps) {

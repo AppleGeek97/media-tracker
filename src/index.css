@@ -20,6 +20,7 @@
   --color-completed: #22c55e;
   --color-paused: #facc15;
   --color-dropped: #ef4444;
+  --color-replaying: #fb923c;
   --color-selection-bg: #333;
   --color-selection-text: #fff;
   --color-scrollbar: #222;
@@ -47,6 +48,7 @@ html.day {
   --color-completed: #16a34a;
   --color-paused: #ca8a04;
   --color-dropped: #dc2626;
+  --color-replaying: #ea580c;
   --color-selection-bg: #ddd;
   --color-selection-text: #000;
   --color-scrollbar: #ccc;

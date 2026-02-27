@@ -6,9 +6,9 @@ export default {
   ],
   safelist: [
     'text-movie', 'text-tv', 'text-game', 'text-comic',
-    'text-planned', 'text-inprogress', 'text-completed', 'text-paused', 'text-dropped',
+    'text-planned', 'text-inprogress', 'text-completed', 'text-paused', 'text-dropped', 'text-replaying',
     'border-movie', 'border-tv', 'border-game', 'border-comic',
-    'border-planned', 'border-inprogress', 'border-completed', 'border-paused', 'border-dropped',
+    'border-planned', 'border-inprogress', 'border-completed', 'border-paused', 'border-dropped', 'border-replaying',
     'bg-movie', 'bg-tv', 'bg-game', 'bg-comic',
   ],
   theme: {
@@ -31,6 +31,7 @@ export default {
         completed: 'var(--color-completed)',
         paused: 'var(--color-paused)',
         dropped: 'var(--color-dropped)',
+        replaying: 'var(--color-replaying)',
       },
       fontFamily: {
         mono: ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', 'monospace'],

@@ -146,6 +146,7 @@ const DraggableEntry = memo(function DraggableEntry({ entry, currentList, onEntr
                 entry.status === 'in_progress' ? 'text-inprogress' :
                 entry.status === 'paused' ? 'text-paused' :
                 entry.status === 'dropped' ? 'text-dropped' :
+                entry.status === 'replaying' ? 'text-replaying' :
                 'text-completed'
               }>{entry.status.replace('_', ' ').toUpperCase()}</span>
               <span> · {entry.year}</span>
