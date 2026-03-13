@@ -336,16 +336,6 @@ function App() {
     setTimeout(() => setShowSaved(false), 1500)
   }
 
-  // Update local state after successful save
-  const handleSaveField = (field: string, value: any) => {
-    if (selectedEntry) {
-      // Don't await - let optimistic update show immediately
-      update(selectedEntry.id, { [field]: value })
-      setShowSaved(true)
-      setTimeout(() => setShowSaved(false), 1500)
-    }
-  }
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'movie': return 'text-movie'
