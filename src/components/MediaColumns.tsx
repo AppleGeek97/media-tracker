@@ -128,7 +128,7 @@ const DroppableColumn = memo(function DroppableColumn({ type, label, color, entr
       </div>
 
       {randomizerState && (
-        <div className="absolute inset-0 bg-bg/90 flex flex-col items-center justify-center gap-4 z-20 px-4">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-20 px-4" style={{ backgroundColor: 'var(--color-bg)' }}>
           {randomizerState.phase === 'spinning' ? (
             <>
               <span className="text-dim text-xs">Picking...</span>
