@@ -229,11 +229,11 @@ function App() {
     }
   }, [entries.length, loading, entryCount])
 
-  const handleAddEntry = (entry: { title: string; type: MediaEntry['type']; status: MediaEntry['status']; year: number; list: ListType; releaseDate?: string }) => {
+  const handleAddEntry = (entry: { title: string; type: MediaEntry['type']; status: MediaEntry['status']; year: number; list: ListType; releaseDate?: string; seasonsCompleted?: number }) => {
     // Don't await - let optimistic update show immediately
     add({
       ...entry,
-      seasonsCompleted: entry.type === 'tv' ? 0 : undefined,
+      seasonsCompleted: entry.type === 'tv' ? (entry.seasonsCompleted ?? 0) : undefined,
       releaseDate: entry.releaseDate,
     })
     setShowSaved(true)

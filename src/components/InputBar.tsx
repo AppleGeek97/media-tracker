@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { MediaType, Status, ListType } from '../types'
 
 interface InputBarProps {
-  onAdd: (entry: { title: string; type: MediaType; status: Status; year: number; list: ListType; releaseDate?: string }) => void
+  onAdd: (entry: { title: string; type: MediaType; status: Status; year: number; list: ListType; releaseDate?: string; seasonsCompleted?: number }) => void
   currentList: ListType
 }
 
@@ -28,6 +28,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
   const [status, setStatus] = useState<Status>('planned')
   const [year, setYear] = useState(new Date().getFullYear())
   const [releaseDate, setReleaseDate] = useState('')
+  const [seasonsCompleted, setSeasonsCompleted] = useState(0)
   const [showSubmenu, setShowSubmenu] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -55,6 +56,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
       year,
       list: currentList,
       releaseDate: currentList === 'futurelog' && releaseDate ? releaseDate : undefined,
+      seasonsCompleted: currentList === 'futurelog' && type === 'tv' ? seasonsCompleted : undefined,
     })
 
     setTitle('')
@@ -62,6 +64,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
     setStatus('planned')
     setYear(new Date().getFullYear())
     setReleaseDate('')
+    setSeasonsCompleted(0)
     setShowSubmenu(false)
     inputRef.current?.blur()
   }
@@ -165,6 +168,19 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
               </div>
             )}
 
+            {currentList === 'futurelog' && type === 'tv' && (
+              <div className="flex items-center gap-4">
+                <span className="text-label text-xs w-16">SEASON</span>
+                <input
+                  type="number"
+                  value={seasonsCompleted}
+                  min={0}
+                  onChange={(e) => setSeasonsCompleted(parseInt(e.target.value) || 0)}
+                  className="w-20 px-2 py-1 text-xs border border-border bg-transparent text-text focus:border-muted focus:outline-none"
+                />
+              </div>
+            )}
+
             <div className="pt-3 border-t border-border flex gap-2">
               <button
                 type="button"
@@ -182,6 +198,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
                   setStatus('planned')
                   setYear(new Date().getFullYear())
                   setReleaseDate('')
+                  setSeasonsCompleted(0)
                   setShowSubmenu(false)
                 }}
                 className="px-3 py-1 text-xs border border-border text-muted hover:text-text hover:border-muted"
