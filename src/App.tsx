@@ -186,6 +186,12 @@ function ThemeToggle({ isDayTheme, onToggle, syncStatus }: { isDayTheme: boolean
 function App() {
   const [selectedTime, setSelectedTime] = useState<number | null>(null)
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null)
+  const [newEntryType, setNewEntryType] = useState<MediaEntry['type'] | null>(null)
+  const [newEntryTitle, setNewEntryTitle] = useState('')
+  const [newEntryStatus, setNewEntryStatus] = useState<MediaEntry['status']>('planned')
+  const [newEntryYear, setNewEntryYear] = useState(new Date().getFullYear())
+  const [newEntryReleaseDate, setNewEntryReleaseDate] = useState('')
+  const [newEntrySeasonsCompleted, setNewEntrySeasonsCompleted] = useState(0)
   const [showSaved, setShowSaved] = useState(false)
   const [entryCount, setEntryCount] = useState(0)
   const [currentList, setCurrentList] = useState<ListType>('backlog')
@@ -240,25 +246,30 @@ function App() {
     setTimeout(() => setShowSaved(false), 1500)
   }
 
-  const placeholderTitles: Record<MediaEntry['type'], string> = {
-    movie: 'New Movie',
-    tv: 'New TV Show',
-    game: 'New Game',
-    comic: 'New Comic',
-  }
 
   const handleQuickAdd = (type: MediaEntry['type']) => {
-    // Don't await - let optimistic update show immediately
+    setNewEntryType(type)
+    setNewEntryTitle('')
+    setNewEntryStatus('planned')
+    setNewEntryYear(new Date().getFullYear())
+    setNewEntryReleaseDate('')
+    setNewEntrySeasonsCompleted(0)
+  }
+
+  const handleConfirmNewEntry = () => {
+    if (!newEntryType || !newEntryTitle.trim()) return
     add({
-      title: placeholderTitles[type],
-      type,
-      status: 'planned',
-      year: new Date().getFullYear(),
+      title: newEntryTitle.trim(),
+      type: newEntryType,
+      status: newEntryStatus,
+      year: newEntryYear,
       list: currentList,
-      seasonsCompleted: type === 'tv' ? 0 : undefined,
+      releaseDate: currentList === 'futurelog' && newEntryReleaseDate ? newEntryReleaseDate : undefined,
+      seasonsCompleted: newEntryType === 'tv' ? newEntrySeasonsCompleted : undefined,
     })
     setShowSaved(true)
     setTimeout(() => setShowSaved(false), 1500)
+    setNewEntryType(null)
   }
 
   // Reset time filter when switching lists
@@ -445,6 +456,99 @@ function App() {
             onEntryClick={handleEntryClick}
             currentList={currentList}
           />
+        </div>
+      )}
+
+      {/* New Entry Modal (triggered by clicking a column) */}
+      {newEntryType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setNewEntryType(null)} />
+          <div className="relative w-full max-w-sm border border-border bg-bg">
+            <div className="px-4 py-2 border-b border-border">
+              <span className={`text-xs ${getTypeColor(newEntryType)}`}>{newEntryType.toUpperCase()}</span>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="text-label text-xs block mb-1">TITLE</label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newEntryTitle}
+                  onChange={(e) => setNewEntryTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleConfirmNewEntry()}
+                  className="w-full px-2 py-1 text-xs border border-border bg-bg text-text focus:outline-none focus:border-muted"
+                />
+              </div>
+              <div className="flex gap-4">
+                {currentList === 'backlog' && (
+                  <>
+                    <div className="flex-1">
+                      <label className="text-label text-xs block mb-1">YEAR</label>
+                      <input
+                        type="number"
+                        value={newEntryYear}
+                        onChange={(e) => setNewEntryYear(parseInt(e.target.value) || new Date().getFullYear())}
+                        className="w-full px-2 py-1 text-xs border border-border bg-bg text-text focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-label text-xs block mb-1">STATUS</label>
+                      <select
+                        value={newEntryStatus}
+                        onChange={(e) => setNewEntryStatus(e.target.value as MediaEntry['status'])}
+                        className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
+                      >
+                        <option value="planned">PLANNED</option>
+                        <option value="in_progress">IN PROGRESS</option>
+                        <option value="paused">PAUSED</option>
+                        <option value="completed">COMPLETED</option>
+                        <option value="dropped">DROPPED</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                {currentList === 'futurelog' && (
+                  <div className="flex-1">
+                    <label className="text-label text-xs block mb-1">RELEASE DATE</label>
+                    <input
+                      type="text"
+                      value={newEntryReleaseDate}
+                      onChange={(e) => setNewEntryReleaseDate(e.target.value)}
+                      placeholder="DD/MM/YY"
+                      className="w-full px-2 py-1 text-xs border border-border bg-bg text-text placeholder-dim focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+              {newEntryType === 'tv' && (
+                <div>
+                  <label className="text-label text-xs block mb-1">SEASON</label>
+                  <input
+                    type="number"
+                    value={newEntrySeasonsCompleted}
+                    min={0}
+                    onChange={(e) => setNewEntrySeasonsCompleted(parseInt(e.target.value) || 0)}
+                    className="w-24 px-2 py-1 text-xs border border-border bg-bg text-text focus:outline-none"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 p-4 border-t border-border">
+              <button
+                onClick={handleConfirmNewEntry}
+                disabled={!newEntryTitle.trim()}
+                className="px-3 py-1 text-xs border border-completed text-completed hover:bg-completed hover:text-bg disabled:opacity-50"
+              >
+                CONFIRM
+              </button>
+              <button
+                onClick={() => setNewEntryType(null)}
+                className="px-3 py-1 text-xs border border-border text-muted hover:text-text hover:border-muted"
+              >
+                CANCEL
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
