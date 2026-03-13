@@ -70,6 +70,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
 
   const handleFocus = () => {
     setShowSubmenu(true)
+    setTimeout(() => inputRef.current?.focus(), 0)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,22 +83,33 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
   return (
     <div className="flex justify-center py-4" ref={containerRef}>
       <div className="w-full max-w-md px-4">
-        <form onSubmit={(e) => { e.preventDefault(); handleConfirm() }}>
-          <input
-            ref={inputRef}
-            type="text"
-            value={title}
-            onChange={handleInputChange}
-            onFocus={handleFocus}
-            placeholder={currentList === 'backlog' ? "Add to backlog..." : "Add to futurelog..."}
-            className={`w-full px-4 py-2 border bg-transparent text-text placeholder-dim focus:outline-none transition-colors ${
-              showSubmenu ? selectedTypeColor : 'border-border focus:border-muted'
-            }`}
-          />
-        </form>
+        {!showSubmenu && (
+          <form onSubmit={(e) => { e.preventDefault(); handleConfirm() }}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={title}
+              onChange={handleInputChange}
+              onFocus={handleFocus}
+              placeholder={currentList === 'backlog' ? "+ Add to backlog..." : "+ Add to futurelog..."}
+              className="w-full px-4 py-2 border border-border bg-transparent text-text placeholder-dim focus:outline-none focus:border-muted transition-colors"
+            />
+          </form>
+        )}
 
         {showSubmenu && (
           <div className="mt-2 border border-border p-4 space-y-4">
+            <div className="flex items-center gap-4">
+              <span className="text-label text-xs w-16">TITLE</span>
+              <input
+                ref={inputRef}
+                type="text"
+                value={title}
+                onChange={handleInputChange}
+                placeholder="Entry name..."
+                className={`flex-1 px-2 py-1 text-xs border bg-transparent text-text placeholder-dim focus:outline-none transition-colors ${selectedTypeColor}`}
+              />
+            </div>
             <div className="flex items-center gap-4">
               <span className="text-label text-xs w-16">TYPE</span>
               <div className="flex gap-2 flex-wrap">
