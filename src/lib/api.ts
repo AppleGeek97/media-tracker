@@ -47,6 +47,10 @@ function normalizeEntry(entry: any): MediaEntry {
     ...entry,
     // Map snake_case to camelCase
     list: entry.list_type || entry.list,
+    releaseDate: entry.release_date ?? entry.releaseDate,
+    seasonsCompleted: entry.seasons_completed ?? entry.seasonsCompleted,
+    completedAt: entry.completed_at ?? entry.completedAt,
+    coverUrl: entry.cover_url ?? entry.coverUrl,
     createdAt: new Date(entry.createdAt || entry.created_at),
     updatedAt: new Date(entry.updatedAt || entry.updated_at),
   }
