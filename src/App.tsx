@@ -386,15 +386,12 @@ function App() {
     <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'mr-72' : ''}`}>
       <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} />
 
-      {/* Version */}
-      <span className="fixed top-12 right-4 z-50 text-dim text-xs select-none">
-        v{__APP_VERSION__}
-      </span>
-
-      {/* Calendar Toggle */}
-      <button
+      {/* Calendar Toggle + Version */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        <span className="text-dim text-xs select-none">v{__APP_VERSION__}</span>
+        <button
         onClick={() => setShowCalendar(prev => !prev)}
-        className={`fixed top-4 right-4 z-50 p-2 border text-muted hover:text-text hover:border-muted ${
+        className={`p-2 border text-muted hover:text-text hover:border-muted ${
           showCalendar ? 'border-muted bg-border' : 'border-border'
         }`}
         title={showCalendar ? 'Hide calendar' : 'Show calendar'}
@@ -406,6 +403,7 @@ function App() {
           <line x1="3" y1="10" x2="21" y2="10" />
         </svg>
       </button>
+      </div>
 
       {/* Save Indicator */}
       {showSaved && (
@@ -488,7 +486,6 @@ function App() {
                   type="text"
                   value={selectedEntry.title}
                   onChange={(e) => setSelectedEntry({ ...selectedEntry, title: e.target.value })}
-                  onBlur={() => handleSaveField('title', selectedEntry.title)}
                   className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
                 />
               </div>
@@ -504,7 +501,6 @@ function App() {
                           const year = parseInt(e.target.value) || new Date().getFullYear()
                           setSelectedEntry({ ...selectedEntry, year })
                         }}
-                        onBlur={() => handleSaveField('year', selectedEntry.year)}
                         className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
                       />
                     </div>
@@ -515,7 +511,6 @@ function App() {
                         onChange={(e) => {
                           const newStatus = e.target.value as MediaEntry['status']
                           setSelectedEntry({ ...selectedEntry, status: newStatus })
-                          handleSaveField('status', newStatus)
                         }}
                         className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
                       >
@@ -535,7 +530,6 @@ function App() {
                       type="text"
                       value={selectedEntry.releaseDate || ''}
                       onChange={(e) => setSelectedEntry({ ...selectedEntry, releaseDate: e.target.value })}
-                      onBlur={() => handleSaveField('releaseDate', selectedEntry.releaseDate)}
                       placeholder="DD/MM/YYYY"
                       className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
                     />
