@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -43,6 +43,13 @@ const hoverColors: Record<MediaType, string> = {
   comic: 'hover:text-comic',
 }
 
+const winnerColors: Record<MediaType, string> = {
+  movie: 'text-movie',
+  tv: 'text-tv',
+  game: 'text-game',
+  comic: 'text-comic',
+}
+
 interface DraggableEntryProps {
   entry: MediaEntry
   currentList: ListType
@@ -59,20 +66,41 @@ interface DroppableColumnProps {
   onEntryClick: (entry: MediaEntry) => void
   onAddEntry?: (type: MediaType) => void
   onDeleteEntry?: (entry: MediaEntry) => void
+  onRandomize?: (type: MediaType) => void
+  randomizerState?: { currentTitle: string; winner: MediaEntry | null; phase: 'spinning' | 'result' } | null
+  onRandomizerClose?: () => void
 }
 
-const DroppableColumn = memo(function DroppableColumn({ type, label, color, entries, currentList, onEntryClick, onAddEntry, onDeleteEntry }: DroppableColumnProps) {
+const DroppableColumn = memo(function DroppableColumn({ type, label, color, entries, currentList, onEntryClick, onAddEntry, onDeleteEntry, onRandomize, randomizerState, onRandomizerClose }: DroppableColumnProps) {
   const { setNodeRef } = useDroppable({
     id: type,
   })
 
   return (
-    <div className="bg-bg flex flex-col h-full min-h-0">
+    <div className="bg-bg flex flex-col h-full min-h-0 relative">
       <div
         ref={setNodeRef}
-        className={`px-4 py-3 border-b ${color}`}
+        className={`px-4 py-3 border-b ${color} flex justify-between items-center`}
       >
         <span className="text-xs">{label}</span>
+        {entries.length >= 2 && onRandomize && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onRandomize(type) }}
+            className="opacity-40 hover:opacity-100 transition-opacity"
+            title="Pick for me"
+          >
+            <svg width="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="2" width="20" height="20" rx="3" ry="3" />
+              {/* center */}
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+              {/* corners */}
+              <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none" />
+              <circle cx="17" cy="7" r="1.5" fill="currentColor" stroke="none" />
+              <circle cx="7" cy="17" r="1.5" fill="currentColor" stroke="none" />
+              <circle cx="17" cy="17" r="1.5" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
+        )}
       </div>
       <div
         onClick={() => onAddEntry?.(type)}
@@ -98,6 +126,33 @@ const DroppableColumn = memo(function DroppableColumn({ type, label, color, entr
           </div>
         )}
       </div>
+
+      {randomizerState && (
+        <div className="absolute inset-0 bg-bg/90 flex flex-col items-center justify-center gap-4 z-20 px-4">
+          {randomizerState.phase === 'spinning' ? (
+            <>
+              <span className="text-dim text-xs">Picking...</span>
+              <span className="text-text text-sm text-center font-mono">{randomizerState.currentTitle}</span>
+            </>
+          ) : (
+            <>
+              <span className="text-dim text-xs">Your pick:</span>
+              <button
+                onClick={() => { randomizerState.winner && onEntryClick(randomizerState.winner) }}
+                className={`text-sm text-center font-mono ${winnerColors[type]} hover:underline`}
+              >
+                {randomizerState.winner?.title}
+              </button>
+              <button
+                onClick={onRandomizerClose}
+                className="text-dim hover:text-text text-xs border border-border hover:border-border/80 px-3 py-1 transition-colors"
+              >
+                Close
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 })
@@ -176,6 +231,13 @@ const DraggableEntry = memo(function DraggableEntry({ entry, currentList, onEntr
 const MediaColumnsInner = function MediaColumnsInner({ entries, onEntryClick, currentList, onAddEntry, onDeleteEntry, onUpdateEntry }: MediaColumnsProps) {
   const [items, setItems] = useState<MediaEntry[]>(entries)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [randomizer, setRandomizer] = useState<{
+    column: MediaType
+    currentTitle: string
+    winner: MediaEntry | null
+    phase: 'spinning' | 'result'
+  } | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const activeEntry = activeId ? items.find((e) => e.id === activeId) : null
 
@@ -194,6 +256,45 @@ const MediaColumnsInner = function MediaColumnsInner({ entries, onEntryClick, cu
   useEffect(() => {
     setItems(entries)
   }, [entries])
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  const startRandomizer = useCallback((type: MediaType) => {
+    const pool = items.filter((e) => e.type === type)
+    if (pool.length < 2) return
+
+    const winner = pool[Math.floor(Math.random() * pool.length)]
+    const steps = 30
+
+    setRandomizer({ column: type, currentTitle: pool[0].title, winner, phase: 'spinning' })
+
+    let step = 0
+    const animate = () => {
+      step++
+      const progress = step / steps
+      const delay = 60 + progress * progress * 200
+
+      const current = pool[Math.floor(Math.random() * pool.length)]
+      if (step === steps) {
+        setRandomizer({ column: type, currentTitle: winner.title, winner, phase: 'result' })
+      } else {
+        setRandomizer({ column: type, currentTitle: current.title, winner, phase: 'spinning' })
+        timerRef.current = setTimeout(animate, delay)
+      }
+    }
+
+    timerRef.current = setTimeout(animate, 60)
+  }, [items])
+
+  const closeRandomizer = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    setRandomizer(null)
+  }, [])
 
   const getEntriesByType = (type: MediaType) =>
     items.filter((e) => e.type === type)
@@ -259,6 +360,9 @@ const MediaColumnsInner = function MediaColumnsInner({ entries, onEntryClick, cu
               onEntryClick={onEntryClick}
               onAddEntry={onAddEntry}
               onDeleteEntry={onDeleteEntry}
+              onRandomize={startRandomizer}
+              randomizerState={randomizer?.column === type ? { currentTitle: randomizer.currentTitle, winner: randomizer.winner, phase: randomizer.phase } : null}
+              onRandomizerClose={closeRandomizer}
             />
           ))}
         </div>
