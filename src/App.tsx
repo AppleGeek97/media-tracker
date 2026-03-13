@@ -386,6 +386,11 @@ function App() {
     <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'mr-72' : ''}`}>
       <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} />
 
+      {/* Version */}
+      <span className="fixed top-12 right-4 z-50 text-dim text-xs select-none">
+        v{__APP_VERSION__}
+      </span>
+
       {/* Calendar Toggle */}
       <button
         onClick={() => setShowCalendar(prev => !prev)}
