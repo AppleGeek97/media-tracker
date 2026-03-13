@@ -45,8 +45,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [title])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleConfirm = () => {
     if (!title.trim()) return
 
     onAdd({
@@ -83,7 +82,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
   return (
     <div className="flex justify-center py-4" ref={containerRef}>
       <div className="w-full max-w-md px-4">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => { e.preventDefault(); handleConfirm() }}>
           <input
             ref={inputRef}
             type="text"
@@ -184,7 +183,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
             <div className="pt-3 border-t border-border flex gap-2">
               <button
                 type="button"
-                onClick={handleSubmit}
+                onClick={handleConfirm}
                 disabled={!title.trim()}
                 className="px-3 py-1 text-xs border border-completed text-completed hover:bg-completed hover:text-bg disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-completed"
               >

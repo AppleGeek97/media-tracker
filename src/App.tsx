@@ -294,6 +294,21 @@ function App() {
     setSelectedEntry(null)
   }
 
+  const handleConfirmEntry = () => {
+    if (selectedEntry) {
+      update(selectedEntry.id, {
+        title: selectedEntry.title,
+        year: selectedEntry.year,
+        status: selectedEntry.status,
+        releaseDate: selectedEntry.releaseDate,
+        seasonsCompleted: selectedEntry.seasonsCompleted,
+      })
+      setShowSaved(true)
+      setTimeout(() => setShowSaved(false), 1500)
+      setSelectedEntry(null)
+    }
+  }
+
   const handleDeleteEntry = () => {
     if (selectedEntry) {
       const id = selectedEntry.id
@@ -525,6 +540,12 @@ function App() {
             </div>
 
             <div className="flex gap-2 p-4 border-t border-border">
+              <button
+                onClick={handleConfirmEntry}
+                className="px-3 py-1 text-xs border border-completed text-completed hover:bg-completed hover:text-bg"
+              >
+                CONFIRM
+              </button>
               <button
                 onClick={handleCloseDetail}
                 className="px-3 py-1 text-xs border border-border text-muted hover:text-text hover:border-muted"
