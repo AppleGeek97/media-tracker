@@ -37,15 +37,13 @@ const TimelineInner = function TimelineInner({ entries, selectedYear, onYearSele
   }
 
   return (
-    <div className="w-20 border-r border-border flex flex-col py-4">
-      <div className="px-3 mb-4">
-        <span className="text-label text-xs">{isFuturelog ? 'RELEASE' : 'TIME'}</span>
-      </div>
+    <div className="border-b sm:border-b-0 sm:border-r border-border flex flex-row sm:flex-col shrink-0 sm:w-20 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-hidden py-2 sm:py-4 px-3 sm:px-0 items-center sm:items-stretch gap-0">
+      <span className="hidden sm:block px-3 mb-4 text-label text-xs shrink-0">{isFuturelog ? 'RELEASE' : 'TIME'}</span>
 
-      <div className="flex-1 overflow-y-auto px-3 space-y-2">
+      <div className="flex flex-row sm:flex-col items-center sm:items-stretch gap-3 sm:gap-0 sm:space-y-2 sm:flex-1 sm:overflow-y-auto sm:px-3">
         <button
           onClick={() => onYearSelect(null)}
-          className={`flex items-center gap-2 text-xs ${
+          className={`flex items-center gap-1 text-xs shrink-0 ${
             selectedYear === null ? 'text-accent' : 'text-muted hover:text-text'
           }`}
         >
@@ -61,7 +59,7 @@ const TimelineInner = function TimelineInner({ entries, selectedYear, onYearSele
             <button
               key={year}
               onClick={() => onYearSelect(isSelected ? null : year)}
-              className={`flex items-center gap-2 text-xs ${
+              className={`flex items-center gap-1 text-xs shrink-0 ${
                 isSelected ? 'text-accent' : 'text-muted hover:text-text'
               }`}
             >

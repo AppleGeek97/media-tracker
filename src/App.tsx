@@ -11,41 +11,9 @@ import type { MediaEntry, ListType } from './types'
 const UNLOCKED_KEY = 'jefflog-unlocked'
 const AUTH_TOKEN_KEY = 'jefflog-auth-token'
 
-function MobileWarning() {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-bg">
-      <div className="max-w-md space-y-4 text-center">
-        <h1 className="text-2xl font-bold text-text">PLEASE USE DESKTOP</h1>
-        <p className="text-sm text-muted">
-          Jeff Log is designed for desktop browsers and doesn't support mobile devices yet.
-        </p>
-        <div className="flex justify-center gap-2 text-xs text-dim">
-          <span>🖥️ Desktop</span>
-          <span>💻 Laptop</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
-      const mobileRegex = /android|ipad|iphone|ipod|windows phone|iemobile|blackberry|mobile/i
-      const isMobileDevice = mobileRegex.test(userAgent)
-      setIsMobile(isMobileDevice)
-    }
-
-    checkMobile()
-  }, [])
-
-  return isMobile
-}
-
 function Logo() {
+  const pixelSize = typeof window !== 'undefined' && window.innerWidth < 640 ? 7 : 10
+
   const pixelLetters: Record<string, number[][]> = {
     j: [
       [0,0,1,1],
@@ -107,8 +75,8 @@ function Logo() {
                     <div
                       key={colIndex}
                       style={{
-                        width: 10,
-                        height: 10,
+                        width: pixelSize,
+                        height: pixelSize,
                         backgroundColor: cell === 1 ? color.top : cell === 2 ? color.bottom : 'transparent',
                       }}
                     />
@@ -357,18 +325,12 @@ function App() {
     }
   }
 
-  const isMobile = useIsMobile()
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen text-muted">
         loading...
       </div>
     )
-  }
-
-  if (isMobile) {
-    return <MobileWarning />
   }
 
   if (!isUnlocked) {
@@ -384,7 +346,7 @@ function App() {
   }
 
   return (
-    <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'mr-72' : ''}`}>
+    <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'sm:mr-72' : ''}`}>
       <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} />
 
       {/* Calendar Toggle + Version */}
@@ -408,13 +370,13 @@ function App() {
 
       {/* Save Indicator */}
       {showSaved && (
-        <div className="fixed top-4 right-16 z-50 px-3 py-1 text-xs text-completed border border-completed/50 bg-bg">
+        <div className="fixed top-4 right-20 sm:right-16 z-50 px-3 py-1 text-xs text-completed border border-completed/50 bg-bg">
           SAVED
         </div>
       )}
 
       {/* Top Half - Logo + Toggle + Input */}
-      <div className="h-1/2 flex flex-col items-center justify-center border-b border-border">
+      <div className="flex flex-col items-center justify-center border-b border-border py-6 sm:h-1/2 sm:py-0">
         <Logo />
 
         <div className="mt-6">
@@ -431,7 +393,7 @@ function App() {
       </div>
 
       {/* Bottom Half - Timeline + Columns + Calendar */}
-      <div className="h-1/2 flex overflow-hidden">
+      <div className="flex-1 sm:h-1/2 flex flex-col sm:flex-row overflow-hidden min-h-0">
         <Timeline
           entries={entries}
           selectedYear={selectedTime}
@@ -450,7 +412,7 @@ function App() {
 
       {/* Calendar View - Full height sidebar */}
       {showCalendar && (
-        <div className="fixed top-0 right-0 h-full w-72 z-40 bg-bg">
+        <div className="fixed top-0 right-0 h-full w-full sm:w-72 z-40 bg-bg border-l border-border">
           <CalendarView
             entries={entries}
             onEntryClick={handleEntryClick}

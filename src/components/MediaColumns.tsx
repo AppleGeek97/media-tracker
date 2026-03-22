@@ -218,7 +218,7 @@ const DraggableEntry = memo(function DraggableEntry({ entry, currentList, onEntr
             e.stopPropagation()
             onDeleteEntry(entry)
           }}
-          className="absolute top-1/2 -translate-y-1/2 right-2 opacity-0 group-hover/entry:opacity-100 text-dim hover:text-dropped text-xs px-1.5 py-0.5 bg-bg border border-border hover:border-dropped/50 transition-opacity z-10"
+          className="absolute top-1/2 -translate-y-1/2 right-2 sm:opacity-0 sm:group-hover/entry:opacity-100 text-dim hover:text-dropped text-xs px-1.5 py-0.5 bg-bg border border-border hover:border-dropped/50 transition-opacity z-10"
           title="Delete entry"
         >
           ×
@@ -348,7 +348,7 @@ const MediaColumnsInner = function MediaColumnsInner({ entries, onEntryClick, cu
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 grid grid-cols-4 gap-px bg-border h-full overflow-hidden">
+        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-px bg-border h-full overflow-hidden">
           {columns.map(({ type, label, color }) => (
             <DroppableColumn
               key={type}
