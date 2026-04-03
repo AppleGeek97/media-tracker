@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { InputBar } from './components/InputBar'
 import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
@@ -44,6 +44,72 @@ function useIsMobile() {
   }, [])
 
   return isMobile
+}
+
+function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const DOT_COUNT = 80
+    const DOT_RADIUS = 1.5
+
+    let width = window.innerWidth
+    let height = window.innerHeight
+    canvas.width = width
+    canvas.height = height
+
+    type Dot = { x: number; y: number; phase: number; speed: number; maxAlpha: number }
+    const dots: Dot[] = Array.from({ length: DOT_COUNT }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.003 + Math.random() * 0.007,
+      maxAlpha: 0.15 + Math.random() * 0.25,
+    }))
+
+    let animId: number
+
+    const draw = (t: number) => {
+      ctx.clearRect(0, 0, width, height)
+      const color = isDayTheme ? '0,0,0' : '255,255,255'
+      for (const dot of dots) {
+        const alpha = ((Math.sin(dot.phase + t * dot.speed) + 1) / 2) * dot.maxAlpha
+        ctx.beginPath()
+        ctx.arc(dot.x, dot.y, DOT_RADIUS, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${color},${alpha})`
+        ctx.fill()
+      }
+      animId = requestAnimationFrame(draw)
+    }
+
+    animId = requestAnimationFrame(draw)
+
+    const onResize = () => {
+      width = window.innerWidth
+      height = window.innerHeight
+      canvas.width = width
+      canvas.height = height
+    }
+    window.addEventListener('resize', onResize)
+
+    return () => {
+      cancelAnimationFrame(animId)
+      window.removeEventListener('resize', onResize)
+    }
+  }, [isDayTheme])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 pointer-events-none"
+      style={{ zIndex: 0 }}
+    />
+  )
 }
 
 function Logo() {
@@ -402,6 +468,7 @@ function App() {
 
   return (
     <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'mr-72' : ''}`}>
+      <AnimatedBackground isDayTheme={isDayTheme} />
       <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} onSync={manualSync} />
 
       {/* Calendar Toggle + Version */}
