@@ -68,6 +68,10 @@ html, body, #root {
   padding: 0;
 }
 
+html {
+  zoom: 1.25;
+}
+
 body {
   font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   font-size: 13px;
