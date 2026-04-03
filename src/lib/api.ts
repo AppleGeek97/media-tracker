@@ -1,10 +1,8 @@
+import { invoke } from '@tauri-apps/api/core'
 import type { MediaEntry, ListType } from '../types'
 
-const API_BASE = '/api'
-const AUTH_TOKEN_KEY = 'jefflog-auth-token'
-
 export interface FetchEntriesResponse {
-  entries: (MediaEntry & { createdAt: Date })[]
+  entries: MediaEntry[]
   error?: string
 }
 
@@ -13,142 +11,84 @@ export interface CreateEntryResponse {
   error?: string
 }
 
-/**
- * Fetch wrapper with JWT authentication
- * Adds Authorization header with token from sessionStorage
- */
-async function fetchWrapper(url: string, options?: RequestInit): Promise<Response> {
-  const token = sessionStorage.getItem(AUTH_TOKEN_KEY)
-
-  const headers = {
-    ...options?.headers,
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-  }
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  })
-
-  // Only reload if we had a token that became invalid (expired session)
-  // Don't reload if we never had a token (user not logged in yet)
-  if (response.status === 401 && token) {
-    sessionStorage.removeItem(AUTH_TOKEN_KEY)
-    sessionStorage.removeItem('jefflog-unlocked')
-    window.location.reload() // Force reload to show password screen
-  }
-
-  return response
-}
-
-// Normalize entry from API format to frontend format
-function normalizeEntry(entry: any): MediaEntry {
+// Normalize entry from Rust backend format (snake_case timestamps as strings → Date objects)
+function normalizeEntry(raw: any): MediaEntry {
   return {
-    ...entry,
-    // Map snake_case to camelCase
-    list: entry.list_type || entry.list,
-    releaseDate: entry.release_date ?? entry.releaseDate,
-    seasonsCompleted: entry.seasons_completed ?? entry.seasonsCompleted,
-    completedAt: entry.completed_at ?? entry.completedAt,
-    coverUrl: entry.cover_url ?? entry.coverUrl,
-    createdAt: new Date(entry.createdAt || entry.created_at),
-    updatedAt: new Date(entry.updatedAt || entry.updated_at),
+    ...raw,
+    // Rust sends mediaType but frontend expects type via the JSON rename
+    type: raw.mediaType ?? raw.type ?? raw.media_type,
+    list: raw.list ?? raw.listType ?? raw.list_type,
+    createdAt: new Date(raw.createdAt ?? raw.created_at),
+    updatedAt: new Date(raw.updatedAt ?? raw.updated_at),
   }
 }
 
-// Fetch entries for authenticated user and list type
-export async function fetchEntries(
-  listType: ListType
-): Promise<FetchEntriesResponse> {
+export async function fetchEntries(listType: ListType): Promise<FetchEntriesResponse> {
   try {
-    const res = await fetchWrapper(`${API_BASE}/entries?list=${listType}`)
-    const data = await res.json()
-
-    // Normalize entries from API format
-    if (data.entries) {
-      data.entries = data.entries.map(normalizeEntry)
-    }
-
-    return data
+    const entries = await invoke<any[]>('get_entries', { listType })
+    return { entries: entries.map(normalizeEntry) }
   } catch (error) {
-    console.error('Fetch entries error:', error)
-    return { entries: [], error: 'Failed to fetch entries' }
+    console.error('get_entries error:', error)
+    return { entries: [], error: String(error) }
   }
 }
 
-// Create a new media entry
 export async function createEntry(
   entry: Omit<MediaEntry, 'id' | 'createdAt' | 'userId' | 'updatedAt'>
 ): Promise<CreateEntryResponse> {
   try {
-    const res = await fetchWrapper(`${API_BASE}/entries/create`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const raw = await invoke<any>('create_entry', {
+      entry: {
         title: entry.title,
         type: entry.type,
         status: entry.status,
         year: entry.year,
-        listType: entry.list,
-        seasonsCompleted: entry.seasonsCompleted,
-        coverUrl: entry.coverUrl,
-        releaseDate: entry.releaseDate,
-        completedAt: entry.completedAt,
-      }),
+        list: entry.list,
+        seasonsCompleted: entry.seasonsCompleted ?? null,
+        coverUrl: entry.coverUrl ?? null,
+        releaseDate: entry.releaseDate ?? null,
+        completedAt: entry.completedAt ?? null,
+      },
     })
-    const data = await res.json()
-
-    // Normalize the created entry
-    if (data.entry) {
-      data.entry = normalizeEntry(data.entry)
-    }
-
-    return data
+    return { entry: normalizeEntry(raw) }
   } catch (error) {
-    console.error('Create entry error:', error)
-    return { error: 'Failed to create entry' }
+    console.error('create_entry error:', error)
+    return { error: String(error) }
   }
 }
 
-// Update an existing entry
 export async function updateEntry(
   id: string,
   updates: Partial<MediaEntry>
 ): Promise<{ entry?: MediaEntry; error?: string }> {
   try {
-    const res = await fetchWrapper(`${API_BASE}/entries/update`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, updates }),
+    const raw = await invoke<any>('update_entry', {
+      id,
+      updates: {
+        title: updates.title ?? null,
+        type: updates.type ?? null,
+        status: updates.status ?? null,
+        year: updates.year ?? null,
+        list: updates.list ?? null,
+        seasonsCompleted: updates.seasonsCompleted ?? null,
+        coverUrl: updates.coverUrl ?? null,
+        releaseDate: updates.releaseDate ?? null,
+        completedAt: updates.completedAt ?? null,
+      },
     })
-    const data = await res.json()
-
-    // Normalize the updated entry
-    if (data.entry) {
-      data.entry = normalizeEntry(data.entry)
-    }
-
-    return data
+    return { entry: normalizeEntry(raw) }
   } catch (error) {
-    console.error('Update entry error:', error)
-    return { error: 'Failed to update entry' }
+    console.error('update_entry error:', error)
+    return { error: String(error) }
   }
 }
 
-// Delete an entry
-export async function deleteEntry(
-  id: string
-): Promise<{ success?: boolean; error?: string }> {
+export async function deleteEntry(id: string): Promise<{ success?: boolean; error?: string }> {
   try {
-    const res = await fetchWrapper(`${API_BASE}/entries/delete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    })
-    const data = await res.json()
-    return data
+    await invoke('delete_entry', { id })
+    return { success: true }
   } catch (error) {
-    console.error('Delete entry error:', error)
-    return { error: 'Failed to delete entry' }
+    console.error('delete_entry error:', error)
+    return { error: String(error) }
   }
 }

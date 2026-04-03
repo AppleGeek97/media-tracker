@@ -3,47 +3,10 @@ import { InputBar } from './components/InputBar'
 import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
 import { CalendarView } from './components/CalendarView'
-import { PasswordModal } from './components/PasswordModal'
 import { SyncIndicator } from './components/SyncIndicator'
 import { useMediaEntries } from './hooks/useMediaEntries'
+import { promoteMaturedFuturelogEntries } from './lib/storage'
 import type { MediaEntry, ListType } from './types'
-
-const UNLOCKED_KEY = 'jefflog-unlocked'
-const AUTH_TOKEN_KEY = 'jefflog-auth-token'
-
-function MobileWarning() {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-bg">
-      <div className="max-w-md space-y-4 text-center">
-        <h1 className="text-2xl font-bold text-text">PLEASE USE DESKTOP</h1>
-        <p className="text-sm text-muted">
-          Jeff Log is designed for desktop browsers and doesn't support mobile devices yet.
-        </p>
-        <div className="flex justify-center gap-2 text-xs text-dim">
-          <span>🖥️ Desktop</span>
-          <span>💻 Laptop</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
-      const mobileRegex = /android|ipad|iphone|ipod|windows phone|iemobile|blackberry|mobile/i
-      const isMobileDevice = mobileRegex.test(userAgent)
-      setIsMobile(isMobileDevice)
-    }
-
-    checkMobile()
-  }, [])
-
-  return isMobile
-}
 
 function Logo() {
   const pixelLetters: Record<string, number[][]> = {
@@ -197,21 +160,13 @@ function App() {
   const [currentList, setCurrentList] = useState<ListType>('backlog')
   const { entries, loading, add, update, remove, syncStatus } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
-  const [isUnlocked, setIsUnlocked] = useState(() => {
-    // Check if user has a valid auth token (new method) or legacy unlocked flag
-    const hasAuthToken = !!sessionStorage.getItem(AUTH_TOKEN_KEY)
-    const wasUnlocked = sessionStorage.getItem(UNLOCKED_KEY) === 'true'
-
-    // If we have an unlocked flag but no token, clear the old flag
-    if (wasUnlocked && !hasAuthToken) {
-      sessionStorage.removeItem(UNLOCKED_KEY)
-    }
-
-    return hasAuthToken || wasUnlocked
-  })
   const [isDayTheme, setIsDayTheme] = useState(() => {
-    return localStorage.getItem('jefflog-theme') === 'day'
+    try { return localStorage.getItem('jefflog-theme') === 'day' } catch { return false }
   })
+
+  useEffect(() => {
+    promoteMaturedFuturelogEntries().catch(console.error)
+  }, [])
 
   useEffect(() => {
     if (isDayTheme) {
@@ -357,29 +312,11 @@ function App() {
     }
   }
 
-  const isMobile = useIsMobile()
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen text-muted">
         loading...
       </div>
-    )
-  }
-
-  if (isMobile) {
-    return <MobileWarning />
-  }
-
-  if (!isUnlocked) {
-    return (
-      <PasswordModal
-        onUnlock={() => {
-          // The auth token is now stored in PasswordModal component
-          sessionStorage.setItem(UNLOCKED_KEY, 'true')
-          setIsUnlocked(true)
-        }}
-      />
     )
   }
 
