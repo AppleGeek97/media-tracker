@@ -6,7 +6,8 @@ import {
   deleteEntry,
   initializeGistSync,
 } from '../lib/storage'
-import { startBackgroundSync, stopBackgroundSync, syncOnFocus } from '../lib/sync-manager'
+import { startBackgroundSync, stopBackgroundSync, syncOnFocus, syncNow } from '../lib/sync-manager'
+import { promoteMaturedFuturelogEntries } from '../lib/storage'
 import type { MediaEntry, SortField, Filters, ListType } from '../types'
 
 export type SyncStatus = 'syncing' | 'synced' | 'error'
@@ -100,6 +101,18 @@ export function useMediaEntries(listType: ListType) {
     setRefreshKey(prev => prev + 1)
   }
 
+  const manualSync = async () => {
+    setSyncStatus('syncing')
+    try {
+      await syncNow()
+      await promoteMaturedFuturelogEntries()
+      setRefreshKey(prev => prev + 1)
+      setSyncStatus('synced')
+    } catch {
+      setSyncStatus('error')
+    }
+  }
+
   return {
     entries: filteredEntries,
     loading,
@@ -112,5 +125,6 @@ export function useMediaEntries(listType: ListType) {
     update,
     remove,
     refresh,
+    manualSync,
   }
 }

@@ -86,6 +86,10 @@ async function syncAll(
   }
 }
 
+export async function syncNow(): Promise<void> {
+  await syncAll(['backlog', 'futurelog'])
+}
+
 // Export the notifyListeners function needed by sync-manager
 // We'll trigger custom events that storage.ts can listen to
 export function notifyListeners(listType: ListType) {

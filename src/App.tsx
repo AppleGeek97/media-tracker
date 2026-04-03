@@ -151,7 +151,7 @@ function ListToggle({ currentList, onToggle }: { currentList: ListType; onToggle
   )
 }
 
-function ThemeToggle({ isDayTheme, onToggle, syncStatus }: { isDayTheme: boolean; onToggle: () => void; syncStatus: 'syncing' | 'synced' | 'error' }) {
+function ThemeToggle({ isDayTheme, onToggle, syncStatus, onSync }: { isDayTheme: boolean; onToggle: () => void; syncStatus: 'syncing' | 'synced' | 'error'; onSync: () => void }) {
   return (
     <div className="fixed top-4 left-4 z-50 flex gap-2">
       <button
@@ -179,6 +179,18 @@ function ThemeToggle({ isDayTheme, onToggle, syncStatus }: { isDayTheme: boolean
           </svg>
         )}
       </button>
+      <button
+        onClick={onSync}
+        disabled={syncStatus === 'syncing'}
+        className="p-2 border border-border text-muted hover:text-text hover:border-muted disabled:opacity-40"
+        title="Sync now"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncStatus === 'syncing' ? 'animate-spin' : ''}>
+          <polyline points="23 4 23 10 17 10" />
+          <polyline points="1 20 1 14 7 14" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+        </svg>
+      </button>
       <SyncIndicator status={syncStatus} />
     </div>
   )
@@ -196,7 +208,7 @@ function App() {
   const [showSaved, setShowSaved] = useState(false)
   const [entryCount, setEntryCount] = useState(0)
   const [currentList, setCurrentList] = useState<ListType>('backlog')
-  const { entries, loading, add, update, remove, syncStatus } = useMediaEntries(currentList)
+  const { entries, loading, add, update, remove, syncStatus, manualSync } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
   const [isUnlocked, setIsUnlocked] = useState(() => {
     // Check if user has a valid auth token (new method) or legacy unlocked flag
@@ -390,7 +402,7 @@ function App() {
 
   return (
     <div className={`flex flex-col h-screen bg-bg transition-all ${showCalendar ? 'mr-72' : ''}`}>
-      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} />
+      <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} onSync={manualSync} />
 
       {/* Calendar Toggle + Version */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
