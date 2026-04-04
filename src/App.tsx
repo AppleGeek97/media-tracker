@@ -728,24 +728,43 @@ function App() {
 
             {/* Cover picker strip */}
             {coverOptions.length > 0 && (
-              <div className="flex gap-2 px-3 py-2 border-t border-border overflow-x-auto">
-                {coverOptions.map((url, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setSelectedEntry(prev => prev ? { ...prev, coverUrl: url } : prev)
-                      update(selectedEntry.id, { coverUrl: url })
-                    }}
-                    className={`flex-shrink-0 border ${selectedEntry.coverUrl === url ? 'border-muted' : 'border-border hover:border-muted'}`}
-                  >
-                    <img
-                      src={url}
-                      alt=""
-                      crossOrigin="anonymous"
-                      style={{ width: 40, height: 56, objectFit: 'cover', display: 'block' }}
-                    />
+              <div className="border-t border-border">
+                <div className="flex gap-2 px-3 py-2 overflow-x-auto">
+                  {coverOptions.map((url, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setSelectedEntry(prev => prev ? { ...prev, coverUrl: url } : prev)
+                        update(selectedEntry.id, { coverUrl: url })
+                      }}
+                      className={`flex-shrink-0 border ${selectedEntry.coverUrl === url ? 'border-muted' : 'border-border hover:border-muted'}`}
+                    >
+                      <img
+                        src={url}
+                        alt=""
+                        style={{ width: 40, height: 56, objectFit: 'cover', display: 'block' }}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <form
+                  className="flex gap-2 px-3 pb-2"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const q = (e.currentTarget.elements.namedItem('q') as HTMLInputElement).value.trim()
+                    if (q) fetchCoverOptions({ ...selectedEntry, title: q })
+                  }}
+                >
+                  <input
+                    name="q"
+                    defaultValue={selectedEntry.title}
+                    className="flex-1 px-2 py-1 text-xs border border-border bg-bg text-text focus:outline-none focus:border-muted"
+                    placeholder="search for different poster..."
+                  />
+                  <button type="submit" className="px-3 py-1 text-xs border border-border text-muted hover:text-text hover:border-muted">
+                    search
                   </button>
-                ))}
+                </form>
               </div>
             )}
 

@@ -1,5 +1,27 @@
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w200'
 
+const ALLOWED_PROXY_HOSTS = ['image.tmdb.org', 'media.rawg.io', 'covers.openlibrary.org']
+
+async function proxyImage(imageUrl: string): Promise<Response> {
+  let parsed: URL
+  try { parsed = new URL(imageUrl) } catch {
+    return new Response('Invalid url', { status: 400 })
+  }
+  if (!ALLOWED_PROXY_HOSTS.some(h => parsed.hostname === h)) {
+    return new Response('Disallowed host', { status: 403 })
+  }
+  const res = await fetch(imageUrl)
+  if (!res.ok) return new Response('Upstream error', { status: 502 })
+  const buffer = await res.arrayBuffer()
+  return new Response(buffer, {
+    headers: {
+      'Content-Type': res.headers.get('Content-Type') ?? 'image/jpeg',
+      'Cache-Control': 'public, max-age=604800, immutable',
+      'Access-Control-Allow-Origin': '*',
+    },
+  })
+}
+
 async function fetchMovieCovers(title: string): Promise<string[]> {
   const apiKey = process.env.TMDB_API_KEY
   if (!apiKey) return []
@@ -50,6 +72,12 @@ async function fetchComicCovers(title: string): Promise<string[]> {
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
+
+  // Image proxy mode — used by AnsiArt to avoid CORS issues
+  const proxyUrl = url.searchParams.get('proxy')
+  if (proxyUrl) return proxyImage(proxyUrl)
+
+  // Cover search mode
   const title = url.searchParams.get('title')
   const type = url.searchParams.get('type')
 
@@ -61,7 +89,6 @@ export async function GET(request: Request) {
   }
 
   let urls: string[] = []
-
   try {
     if (type === 'movie') urls = await fetchMovieCovers(title)
     else if (type === 'tv') urls = await fetchTVCovers(title)

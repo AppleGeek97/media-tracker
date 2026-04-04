@@ -34,7 +34,8 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, for
     setAsciiRows([])
 
     const img = new Image()
-    img.crossOrigin = 'anonymous'
+    // Load via same-origin proxy to avoid all CORS/cache issues
+    const proxiedSrc = `/api/cover?proxy=${encodeURIComponent(src)}`
 
     img.onload = () => {
       const canvas = canvasRef.current
@@ -132,7 +133,7 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, for
     }
 
     img.onerror = () => setLoading(false)
-    img.src = src
+    img.src = proxiedSrc
   }, [src, mode, maxWidth, maxHeight, forceAspect])
 
   const isEmpty = mode === 'ansi' ? ansiRows.length === 0 : asciiRows.length === 0
