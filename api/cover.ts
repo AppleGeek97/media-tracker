@@ -22,30 +22,42 @@ async function proxyImage(imageUrl: string): Promise<Response> {
   })
 }
 
-async function fetchMovieCovers(title: string): Promise<string[]> {
+async function fetchTMDBPosters(endpoint: string, title: string): Promise<string[]> {
   const apiKey = process.env.TMDB_API_KEY
   if (!apiKey) return []
-  const res = await fetch(
-    `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(title)}&page=1`
+
+  // Step 1: search to get ID
+  const searchRes = await fetch(
+    `https://api.themoviedb.org/3/search/${endpoint}?api_key=${apiKey}&query=${encodeURIComponent(title)}&page=1`
   )
-  const data = await res.json() as any
-  return (data.results ?? [])
-    .filter((r: any) => r.poster_path)
+  const searchData = await searchRes.json() as any
+  const topResults = (searchData.results ?? []).filter((r: any) => r.poster_path).slice(0, 3)
+  if (topResults.length === 0) return []
+
+  // Step 2: fetch all posters for the top result
+  const id = topResults[0].id
+  const imgRes = await fetch(
+    `https://api.themoviedb.org/3/${endpoint}/${id}/images?api_key=${apiKey}`
+  )
+  const imgData = await imgRes.json() as any
+  const posters: string[] = (imgData.posters ?? [])
+    .sort((a: any, b: any) => (b.vote_count ?? 0) - (a.vote_count ?? 0))
     .slice(0, 5)
-    .map((r: any) => `${TMDB_IMG}${r.poster_path}`)
+    .map((p: any) => `${TMDB_IMG}${p.file_path}`)
+
+  // Fall back to search result posters if images endpoint returns nothing
+  if (posters.length === 0) {
+    return topResults.map((r: any) => `${TMDB_IMG}${r.poster_path}`)
+  }
+  return posters
+}
+
+async function fetchMovieCovers(title: string): Promise<string[]> {
+  return fetchTMDBPosters('movie', title)
 }
 
 async function fetchTVCovers(title: string): Promise<string[]> {
-  const apiKey = process.env.TMDB_API_KEY
-  if (!apiKey) return []
-  const res = await fetch(
-    `https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(title)}&page=1`
-  )
-  const data = await res.json() as any
-  return (data.results ?? [])
-    .filter((r: any) => r.poster_path)
-    .slice(0, 5)
-    .map((r: any) => `${TMDB_IMG}${r.poster_path}`)
+  return fetchTMDBPosters('tv', title)
 }
 
 async function getIGDBToken(): Promise<string | null> {
