@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 // Characters ordered dark → light (suits dark background)
 const ASCII_RAMP = ' .\'`^",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'
 
-// Approximate ratio of character width to character height in monospace at our font size
-const CHAR_ASPECT = 0.6  // charW / charH (~4.2px wide / 7px tall)
+const FONT_SIZE = 7
+const LINE_HEIGHT = 7
 
 interface AnsiCell {
   fg: string
@@ -39,16 +39,18 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, cla
       if (!canvas) return
       const ctx = canvas.getContext('2d')!
 
-      // Calculate display dimensions that preserve aspect ratio within the bounding box.
-      // Screen width = w * charW, screen height = h * charH → ratio must match imgAspect.
-      // h = w * (charW/charH) / imgAspect = w * CHAR_ASPECT / imgAspect
+      // Measure the actual character width in this browser/font so the aspect ratio is exact
+      ctx.font = `${FONT_SIZE}px monospace`
+      const charW = ctx.measureText('0').width
+      const charAspect = charW / LINE_HEIGHT  // charW / charH
+
       const imgAspect = img.naturalWidth / img.naturalHeight
 
       let w = maxWidth
-      let h = Math.round(w * CHAR_ASPECT / imgAspect)
+      let h = Math.round(w * charAspect / imgAspect)
       if (h > maxHeight) {
         h = maxHeight
-        w = Math.round(h * imgAspect / CHAR_ASPECT)
+        w = Math.round(h * imgAspect / charAspect)
       }
       w = Math.max(1, w)
       h = Math.max(1, h)
