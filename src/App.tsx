@@ -5,6 +5,7 @@ import { MediaColumns } from './components/MediaColumns'
 import { CalendarView } from './components/CalendarView'
 import { PasswordModal } from './components/PasswordModal'
 import { SyncIndicator } from './components/SyncIndicator'
+import { AnsiArt } from './components/AnsiArt'
 import { useMediaEntries } from './hooks/useMediaEntries'
 import { promoteMaturedFuturelogEntries } from './lib/storage'
 import type { MediaEntry, ListType } from './types'
@@ -356,6 +357,25 @@ function App() {
     setSelectedEntry(entry)
   }
 
+  // Auto-fetch cover art when opening an entry that doesn't have one yet
+  useEffect(() => {
+    if (!selectedEntry || selectedEntry.coverUrl) return
+    const id = selectedEntry.id
+    const fetchCover = async () => {
+      try {
+        const res = await fetch(`/api/cover?title=${encodeURIComponent(selectedEntry.title)}&type=${selectedEntry.type}`)
+        const data = await res.json()
+        if (data.url) {
+          setSelectedEntry(prev => prev?.id === id ? { ...prev, coverUrl: data.url } : prev)
+          update(id, { coverUrl: data.url })
+        }
+      } catch (e) {
+        console.error('Cover fetch failed:', e)
+      }
+    }
+    fetchCover()
+  }, [selectedEntry?.id])
+
   const handleCloseDetail = () => {
     setSelectedEntry(null)
   }
@@ -623,6 +643,21 @@ function App() {
                 <option value="game">GAME</option>
                 <option value="comic">COMIC</option>
               </select>
+            </div>
+
+            {/* Cover art — shown once fetched, placeholder while loading */}
+            <div className="flex justify-center border-b border-border py-3">
+              {selectedEntry.coverUrl ? (
+                <AnsiArt
+                  src={`/api/cover-image?url=${encodeURIComponent(selectedEntry.coverUrl)}`}
+                  width={32}
+                  height={24}
+                />
+              ) : (
+                <div className="text-dim text-xs" style={{ width: 160, height: 168, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  fetching cover...
+                </div>
+              )}
             </div>
 
             <div className="p-4 space-y-3">
