@@ -1,6 +1,6 @@
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w200'
 
-const ALLOWED_PROXY_HOSTS = ['image.tmdb.org', 'media.rawg.io', 'covers.openlibrary.org']
+const ALLOWED_PROXY_HOSTS = ['image.tmdb.org', 'media.rawg.io', 'covers.openlibrary.org', 'images.igdb.com']
 
 async function proxyImage(imageUrl: string): Promise<Response> {
   let parsed: URL
@@ -48,16 +48,36 @@ async function fetchTVCovers(title: string): Promise<string[]> {
     .map((r: any) => `${TMDB_IMG}${r.poster_path}`)
 }
 
-async function fetchGameCovers(title: string): Promise<string[]> {
-  const apiKey = process.env.RAWG_API_KEY
-  if (!apiKey) return []
+async function getIGDBToken(): Promise<string | null> {
+  const clientId = process.env.IGDB_CLIENT_ID
+  const clientSecret = process.env.IGDB_CLIENT_SECRET
+  if (!clientId || !clientSecret) return null
   const res = await fetch(
-    `https://api.rawg.io/api/games?key=${apiKey}&search=${encodeURIComponent(title)}&page_size=5`
+    `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`,
+    { method: 'POST' }
   )
   const data = await res.json() as any
-  return (data.results ?? [])
-    .filter((r: any) => r.background_image)
-    .map((r: any) => r.background_image as string)
+  return data.access_token ?? null
+}
+
+async function fetchGameCovers(title: string): Promise<string[]> {
+  const clientId = process.env.IGDB_CLIENT_ID
+  const token = await getIGDBToken()
+  if (!clientId || !token) return []
+
+  const res = await fetch('https://api.igdb.com/v4/games', {
+    method: 'POST',
+    headers: {
+      'Client-ID': clientId,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'text/plain',
+    },
+    body: `search "${title}"; fields name,cover.image_id; where cover != null; limit 5;`,
+  })
+  const data = await res.json() as any
+  return (data ?? [])
+    .filter((g: any) => g.cover?.image_id)
+    .map((g: any) => `https://images.igdb.com/igdb/image/upload/t_cover_big/${g.cover.image_id}.jpg`)
 }
 
 async function fetchComicCovers(title: string): Promise<string[]> {
