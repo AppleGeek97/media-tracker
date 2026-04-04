@@ -16,31 +16,43 @@ const AUTH_TOKEN_KEY = 'jefflog-auth-token'
 function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
   useEffect(() => {
     const canvas = document.createElement('canvas')
-    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999'
+    // Only cover top half of the screen
+    canvas.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:9999'
     document.body.appendChild(canvas)
 
     const ctx = canvas.getContext('2d')!
-    const DOT_COUNT = 120
-    const DOT_RADIUS = 2
+    const SPACING = 36
+    const DOT_RADIUS = 1.5
 
     let width = canvas.width = window.innerWidth
-    let height = canvas.height = window.innerHeight
+    let height = canvas.height = Math.floor(window.innerHeight / 2)
 
-    type Dot = { x: number; y: number; phase: number; speed: number; maxAlpha: number }
-    const dots: Dot[] = Array.from({ length: DOT_COUNT }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.003 + Math.random() * 0.007,
-      maxAlpha: 0.4 + Math.random() * 0.4,
-    }))
+    type Dot = { x: number; y: number; phase: number; speed: number }
+    let dots: Dot[] = []
+
+    const buildGrid = () => {
+      dots = []
+      const cols = Math.ceil(width / SPACING)
+      const rows = Math.ceil(height / SPACING)
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          dots.push({
+            x: c * SPACING + SPACING / 2,
+            y: r * SPACING + SPACING / 2,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.0004 + Math.random() * 0.0004,
+          })
+        }
+      }
+    }
+    buildGrid()
 
     let animId: number
     const draw = (t: number) => {
       ctx.clearRect(0, 0, width, height)
       const color = isDayTheme ? '0,0,0' : '255,255,255'
       for (const dot of dots) {
-        const alpha = ((Math.sin(dot.phase + t * dot.speed) + 1) / 2) * dot.maxAlpha
+        const alpha = ((Math.sin(dot.phase + t * dot.speed) + 1) / 2) * 0.5
         ctx.beginPath()
         ctx.arc(dot.x, dot.y, DOT_RADIUS, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(${color},${alpha})`
@@ -52,7 +64,8 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
 
     const onResize = () => {
       width = canvas.width = window.innerWidth
-      height = canvas.height = window.innerHeight
+      height = canvas.height = Math.floor(window.innerHeight / 2)
+      buildGrid()
     }
     window.addEventListener('resize', onResize)
 
