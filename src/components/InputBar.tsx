@@ -92,13 +92,13 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
               onChange={handleInputChange}
               onFocus={handleFocus}
               placeholder={currentList === 'backlog' ? "+ Add to backlog..." : "+ Add to futurelog..."}
-              className="w-full px-4 py-2 border border-border bg-transparent text-text placeholder-dim focus:outline-none focus:border-muted transition-colors"
+              className="w-full px-4 py-2 border border-border bg-bg text-text placeholder-dim focus:outline-none focus:border-muted transition-colors"
             />
           </form>
         )}
 
         {showSubmenu && (
-          <div className="mt-2 border border-border p-4 space-y-4">
+          <div className="mt-2 border border-border bg-bg p-4 space-y-4">
             <div className="flex items-center gap-4">
               <span className="text-label text-xs w-16">TITLE</span>
               <input
@@ -107,7 +107,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
                 value={title}
                 onChange={handleInputChange}
                 placeholder="Entry name..."
-                className={`flex-1 px-2 py-1 text-xs border bg-transparent text-text placeholder-dim focus:outline-none transition-colors ${selectedTypeColor}`}
+                className={`flex-1 px-2 py-1 text-xs border bg-bg text-text placeholder-dim focus:outline-none transition-colors ${selectedTypeColor}`}
               />
             </div>
             <div className="flex items-center gap-4">
@@ -161,7 +161,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
                   type="number"
                   value={year}
                   onChange={(e) => setYear(parseInt(e.target.value) || new Date().getFullYear())}
-                  className="w-20 px-2 py-1 text-xs border border-border bg-transparent text-text focus:border-muted focus:outline-none"
+                  className="w-20 px-2 py-1 text-xs border border-border bg-bg text-text focus:border-muted focus:outline-none"
                 />
               </div>
             )}
@@ -174,7 +174,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
                   value={releaseDate}
                   onChange={(e) => setReleaseDate(e.target.value)}
                   placeholder="DD/MM/YY"
-                  className="w-24 px-2 py-1 text-xs border border-border bg-transparent text-text placeholder-dim focus:border-muted focus:outline-none"
+                  className="w-24 px-2 py-1 text-xs border border-border bg-bg text-text placeholder-dim focus:border-muted focus:outline-none"
                 />
               </div>
             )}
@@ -187,7 +187,7 @@ export function InputBar({ onAdd, currentList }: InputBarProps) {
                   value={seasonsCompleted}
                   min={0}
                   onChange={(e) => setSeasonsCompleted(parseInt(e.target.value) || 0)}
-                  className="w-20 px-2 py-1 text-xs border border-border bg-transparent text-text focus:border-muted focus:outline-none"
+                  className="w-20 px-2 py-1 text-xs border border-border bg-bg text-text focus:border-muted focus:outline-none"
                 />
               </div>
             )}
