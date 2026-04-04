@@ -20,8 +20,8 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
-    const SPACING = 36
-    const DOT_RADIUS = 1.5
+    const SPACING = 28
+    const DOT_RADIUS = 0.8
 
     let width = canvas.width = canvas.offsetWidth
     let height = canvas.height = canvas.offsetHeight
@@ -51,7 +51,7 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
       ctx.clearRect(0, 0, width, height)
       const color = isDayTheme ? '0,0,0' : '255,255,255'
       for (const dot of dots) {
-        const alpha = ((Math.sin(dot.phase + t * dot.speed) + 1) / 2) * 0.5
+        const alpha = ((Math.sin(dot.phase + t * dot.speed) + 1) / 2) * 0.25
         ctx.beginPath()
         ctx.arc(dot.x, dot.y, DOT_RADIUS, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(${color},${alpha})`
