@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 // Characters ordered dark → light (suits dark background)
 const ASCII_RAMP = ' .\'`^",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'
 
+// Approximate ratio of character width to character height in monospace at our font size
+const CHAR_ASPECT = 0.55  // charW / charH
+
 interface AnsiCell {
   fg: string
   bg: string
@@ -11,13 +14,13 @@ interface AnsiCell {
 interface Props {
   src: string
   mode?: 'ansi' | 'ascii'
-  // width in characters; for ansi each char = 2px tall (half-block), for ascii = 1px tall
-  width?: number
-  height?: number
+  // Max bounding box in characters — actual size is calculated from image aspect ratio
+  maxWidth?: number
+  maxHeight?: number
   className?: string
 }
 
-export function AnsiArt({ src, mode = 'ansi', width = 28, height = 26, className = '' }: Props) {
+export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, className = '' }: Props) {
   const [ansiRows, setAnsiRows] = useState<AnsiCell[][]>([])
   const [asciiRows, setAsciiRows] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,14 +39,29 @@ export function AnsiArt({ src, mode = 'ansi', width = 28, height = 26, className
       if (!canvas) return
       const ctx = canvas.getContext('2d')!
 
+      // Calculate display dimensions that preserve aspect ratio within the bounding box
+      const imgAspect = img.naturalWidth / img.naturalHeight
+      // In ANSI mode each display row uses 2 source pixels, so effective cell aspect differs
+      // charW/charH for ANSI = CHAR_ASPECT; effective source pixel aspect = 1:(2/CHAR_ASPECT)
+      const cellAspect = mode === 'ansi' ? CHAR_ASPECT / 2 : CHAR_ASPECT
+
+      let w = maxWidth
+      let h = Math.round(w * cellAspect / imgAspect)
+      if (h > maxHeight) {
+        h = maxHeight
+        w = Math.round(h * imgAspect / cellAspect)
+      }
+      w = Math.max(1, w)
+      h = Math.max(1, h)
+
       if (mode === 'ansi') {
-        canvas.width = width
-        canvas.height = height * 2
-        ctx.drawImage(img, 0, 0, width, height * 2)
+        canvas.width = w
+        canvas.height = h * 2
+        ctx.drawImage(img, 0, 0, w, h * 2)
 
         let imageData: ImageData
         try {
-          imageData = ctx.getImageData(0, 0, width, height * 2)
+          imageData = ctx.getImageData(0, 0, w, h * 2)
         } catch {
           setLoading(false)
           return
@@ -51,11 +69,11 @@ export function AnsiArt({ src, mode = 'ansi', width = 28, height = 26, className
         const { data } = imageData
 
         const result: AnsiCell[][] = []
-        for (let row = 0; row < height; row++) {
+        for (let row = 0; row < h; row++) {
           const cols: AnsiCell[] = []
-          for (let col = 0; col < width; col++) {
-            const ti = ((row * 2) * width + col) * 4
-            const bi = ((row * 2 + 1) * width + col) * 4
+          for (let col = 0; col < w; col++) {
+            const ti = ((row * 2) * w + col) * 4
+            const bi = ((row * 2 + 1) * w + col) * 4
             cols.push({
               fg: `rgb(${data[ti]},${data[ti + 1]},${data[ti + 2]})`,
               bg: `rgb(${data[bi]},${data[bi + 1]},${data[bi + 2]})`,
@@ -66,17 +84,13 @@ export function AnsiArt({ src, mode = 'ansi', width = 28, height = 26, className
         setAnsiRows(result)
 
       } else {
-        // ASCII: monochrome, chars mapped to brightness
-        // Monospace chars are ~0.6:1 w:h, so sample at half height to keep proportions
-        const pw = width
-        const ph = Math.round(height * 0.55)
-        canvas.width = pw
-        canvas.height = ph
-        ctx.drawImage(img, 0, 0, pw, ph)
+        canvas.width = w
+        canvas.height = h
+        ctx.drawImage(img, 0, 0, w, h)
 
         let imageData: ImageData
         try {
-          imageData = ctx.getImageData(0, 0, pw, ph)
+          imageData = ctx.getImageData(0, 0, w, h)
         } catch {
           setLoading(false)
           return
@@ -84,10 +98,10 @@ export function AnsiArt({ src, mode = 'ansi', width = 28, height = 26, className
         const { data } = imageData
 
         const rows: string[] = []
-        for (let row = 0; row < ph; row++) {
+        for (let row = 0; row < h; row++) {
           let line = ''
-          for (let col = 0; col < pw; col++) {
-            const i = (row * pw + col) * 4
+          for (let col = 0; col < w; col++) {
+            const i = (row * w + col) * 4
             const brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
             const charIdx = Math.floor(brightness / 255 * (ASCII_RAMP.length - 1))
             line += ASCII_RAMP[charIdx]
@@ -102,7 +116,7 @@ export function AnsiArt({ src, mode = 'ansi', width = 28, height = 26, className
 
     img.onerror = () => setLoading(false)
     img.src = src
-  }, [src, mode, width, height])
+  }, [src, mode, maxWidth, maxHeight])
 
   const isEmpty = mode === 'ansi' ? ansiRows.length === 0 : asciiRows.length === 0
 
@@ -111,7 +125,7 @@ export function AnsiArt({ src, mode = 'ansi', width = 28, height = 26, className
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       {loading ? (
         <div
-          style={{ width: width * 5, height: height * 7 }}
+          style={{ width: maxWidth * 5, height: maxHeight * 7 }}
           className="flex items-center justify-center text-dim text-xs"
         >
           loading...
