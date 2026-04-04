@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { InputBar } from './components/InputBar'
 import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
@@ -14,21 +14,17 @@ const AUTH_TOKEN_KEY = 'jefflog-auth-token'
 
 
 function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const canvas = document.createElement('canvas')
+    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0'
+    document.body.appendChild(canvas)
 
+    const ctx = canvas.getContext('2d')!
     const DOT_COUNT = 120
     const DOT_RADIUS = 2
 
-    let width = window.innerWidth
-    let height = window.innerHeight
-    canvas.width = width
-    canvas.height = height
+    let width = canvas.width = window.innerWidth
+    let height = canvas.height = window.innerHeight
 
     type Dot = { x: number; y: number; phase: number; speed: number; maxAlpha: number }
     const dots: Dot[] = Array.from({ length: DOT_COUNT }, () => ({
@@ -40,7 +36,6 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
     }))
 
     let animId: number
-
     const draw = (t: number) => {
       ctx.fillStyle = isDayTheme ? '#f5f5f5' : '#0a0a0a'
       ctx.fillRect(0, 0, width, height)
@@ -54,30 +49,22 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
       }
       animId = requestAnimationFrame(draw)
     }
-
     animId = requestAnimationFrame(draw)
 
     const onResize = () => {
-      width = window.innerWidth
-      height = window.innerHeight
-      canvas.width = width
-      canvas.height = height
+      width = canvas.width = window.innerWidth
+      height = canvas.height = window.innerHeight
     }
     window.addEventListener('resize', onResize)
 
     return () => {
       cancelAnimationFrame(animId)
       window.removeEventListener('resize', onResize)
+      document.body.removeChild(canvas)
     }
   }, [isDayTheme])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 0 }}
-    />
-  )
+  return null
 }
 
 function Logo() {
@@ -429,7 +416,7 @@ function App() {
   }
 
   return (
-    <div className={`relative flex flex-col h-screen transition-all ${showCalendar ? 'mr-72' : ''}`} style={{ zIndex: 1 }}>
+    <div className={`flex flex-col h-screen transition-all ${showCalendar ? 'mr-72' : ''}`}>
       <AnimatedBackground isDayTheme={isDayTheme} />
       <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} onSync={manualSync} />
 
