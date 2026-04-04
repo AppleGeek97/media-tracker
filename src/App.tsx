@@ -250,7 +250,22 @@ function App() {
   const { entries, loading, add, update, remove, syncStatus, manualSync } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
   const [coverOptions, setCoverOptions] = useState<string[]>([])
-  const [coverDisplayMode, setCoverDisplayMode] = useState<'ascii' | 'ansi' | 'original'>('ascii')
+  type CoverMode = 'ascii' | 'ansi' | 'original'
+  const COVER_MODES_KEY = 'jefflog-cover-modes'
+  const getCoverMode = (id: string): CoverMode => {
+    try {
+      const map = JSON.parse(localStorage.getItem(COVER_MODES_KEY) ?? '{}')
+      return map[id] ?? 'ascii'
+    } catch { return 'ascii' }
+  }
+  const saveCoverMode = (id: string, mode: CoverMode) => {
+    try {
+      const map = JSON.parse(localStorage.getItem(COVER_MODES_KEY) ?? '{}')
+      map[id] = mode
+      localStorage.setItem(COVER_MODES_KEY, JSON.stringify(map))
+    } catch {}
+  }
+  const [coverDisplayMode, setCoverDisplayMode] = useState<CoverMode>('ascii')
   const [isUnlocked, setIsUnlocked] = useState(() => {
     // Check if user has a valid auth token (new method) or legacy unlocked flag
     const hasAuthToken = !!sessionStorage.getItem(AUTH_TOKEN_KEY)
@@ -357,6 +372,7 @@ function App() {
 
   const handleEntryClick = (entry: MediaEntry) => {
     setSelectedEntry(entry)
+    setCoverDisplayMode(getCoverMode(entry.id))
   }
 
   const fetchCoverOptions = async (entry: MediaEntry) => {
@@ -747,7 +763,7 @@ function App() {
                   {(['ascii', 'ansi', 'original'] as const).map(m => (
                     <button
                       key={m}
-                      onClick={() => setCoverDisplayMode(m)}
+                      onClick={() => { setCoverDisplayMode(m); saveCoverMode(selectedEntry.id, m) }}
                       className={`text-xs px-1 ${coverDisplayMode === m ? 'text-text' : 'text-dim hover:text-muted'}`}
                     >
                       {m}
