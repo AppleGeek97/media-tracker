@@ -17,10 +17,12 @@ interface Props {
   // Max bounding box in characters — actual size is calculated from image aspect ratio
   maxWidth?: number
   maxHeight?: number
+  // Force a specific output aspect ratio (w/h) with center-cropping
+  forceAspect?: number
   className?: string
 }
 
-export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, className = '' }: Props) {
+export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, forceAspect, className = '' }: Props) {
   const [ansiRows, setAnsiRows] = useState<AnsiCell[][]>([])
   const [asciiRows, setAsciiRows] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,13 +46,26 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, cla
       const charW = ctx.measureText('0').width
       const charAspect = charW / LINE_HEIGHT  // charW / charH
 
-      const imgAspect = img.naturalWidth / img.naturalHeight
+      // Center-crop source if forceAspect is set
+      const targetAspect = forceAspect ?? (img.naturalWidth / img.naturalHeight)
+      const naturalAspect = img.naturalWidth / img.naturalHeight
+      let srcX = 0, srcY = 0
+      let srcW = img.naturalWidth, srcH = img.naturalHeight
+      if (forceAspect) {
+        if (naturalAspect > forceAspect) {
+          srcW = Math.round(img.naturalHeight * forceAspect)
+          srcX = Math.round((img.naturalWidth - srcW) / 2)
+        } else {
+          srcH = Math.round(img.naturalWidth / forceAspect)
+          srcY = Math.round((img.naturalHeight - srcH) / 2)
+        }
+      }
 
       let w = maxWidth
-      let h = Math.round(w * charAspect / imgAspect)
+      let h = Math.round(w * charAspect / targetAspect)
       if (h > maxHeight) {
         h = maxHeight
-        w = Math.round(h * imgAspect / charAspect)
+        w = Math.round(h * targetAspect / charAspect)
       }
       w = Math.max(1, w)
       h = Math.max(1, h)
@@ -58,7 +73,7 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, cla
       if (mode === 'ansi') {
         canvas.width = w
         canvas.height = h * 2
-        ctx.drawImage(img, 0, 0, w, h * 2)
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, w, h * 2)
 
         let imageData: ImageData
         try {
@@ -87,7 +102,7 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, cla
       } else {
         canvas.width = w
         canvas.height = h
-        ctx.drawImage(img, 0, 0, w, h)
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, w, h)
 
         let imageData: ImageData
         try {
@@ -117,7 +132,7 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, cla
 
     img.onerror = () => setLoading(false)
     img.src = src
-  }, [src, mode, maxWidth, maxHeight])
+  }, [src, mode, maxWidth, maxHeight, forceAspect])
 
   const isEmpty = mode === 'ansi' ? ansiRows.length === 0 : asciiRows.length === 0
 
