@@ -24,7 +24,7 @@ interface Props {
 
 export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, forceAspect, className = '' }: Props) {
   const [ansiRows, setAnsiRows] = useState<AnsiCell[][]>([])
-  const [asciiRows, setAsciiRows] = useState<string[]>([])
+  const [asciiRows, setAsciiRows] = useState<{ char: string; color: string }[][]>([])
   const [loading, setLoading] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -113,16 +113,17 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, for
         }
         const { data } = imageData
 
-        const rows: string[] = []
+        const rows: { char: string; color: string }[][] = []
         for (let row = 0; row < h; row++) {
-          let line = ''
+          const cols: { char: string; color: string }[] = []
           for (let col = 0; col < w; col++) {
             const i = (row * w + col) * 4
-            const brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+            const r = data[i], g = data[i + 1], b = data[i + 2]
+            const brightness = 0.299 * r + 0.587 * g + 0.114 * b
             const charIdx = Math.floor(brightness / 255 * (ASCII_RAMP.length - 1))
-            line += ASCII_RAMP[charIdx]
+            cols.push({ char: ASCII_RAMP[charIdx], color: `rgb(${r},${g},${b})` })
           }
-          rows.push(line)
+          rows.push(cols)
         }
         setAsciiRows(rows)
       }
@@ -178,19 +179,26 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, for
           ))}
         </div>
       ) : (
-        <pre
+        <div
           style={{
             fontFamily: 'monospace',
             fontSize: '7px',
             lineHeight: '8px',
             letterSpacing: '0.5px',
             userSelect: 'none',
-            margin: 0,
-            whiteSpace: 'pre',
+            display: 'inline-block',
           }}
         >
-          {asciiRows.join('\n')}
-        </pre>
+          {asciiRows.map((row, ri) => (
+            <div key={ri} style={{ display: 'flex' }}>
+              {row.map((cell, ci) => (
+                <span key={ci} style={{ color: cell.color, flexShrink: 0 }}>
+                  {cell.char}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
