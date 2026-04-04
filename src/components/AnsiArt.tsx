@@ -19,10 +19,12 @@ interface Props {
   maxHeight?: number
   // Force a specific output aspect ratio (w/h) with center-cropping
   forceAspect?: number
+  // CSS brightness multiplier (1 = normal, 1.5 = brighter)
+  brightness?: number
   className?: string
 }
 
-export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, forceAspect, className = '' }: Props) {
+export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, forceAspect, brightness = 1, className = '' }: Props) {
   const [ansiRows, setAnsiRows] = useState<AnsiCell[][]>([])
   const [asciiRows, setAsciiRows] = useState<{ char: string; color: string }[][]>([])
   const [loading, setLoading] = useState(true)
@@ -151,6 +153,7 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, for
       ) : isEmpty ? null : mode === 'ansi' ? (
         <div
           style={{
+            filter: brightness !== 1 ? `brightness(${brightness})` : undefined,
             fontFamily: 'monospace',
             fontSize: '7px',
             lineHeight: '7px',
@@ -182,6 +185,7 @@ export function AnsiArt({ src, mode = 'ansi', maxWidth = 36, maxHeight = 28, for
       ) : (
         <div
           style={{
+            filter: brightness !== 1 ? `brightness(${brightness})` : undefined,
             fontFamily: 'monospace',
             fontSize: '7px',
             lineHeight: '8px',

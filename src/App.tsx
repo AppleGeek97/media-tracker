@@ -250,6 +250,7 @@ function App() {
   const { entries, loading, add, update, remove, syncStatus, manualSync } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
   const [coverOptions, setCoverOptions] = useState<string[]>([])
+  const [coverDisplayMode, setCoverDisplayMode] = useState<'ascii' | 'ansi' | 'original'>('ascii')
   const [isUnlocked, setIsUnlocked] = useState(() => {
     // Check if user has a valid auth token (new method) or legacy unlocked flag
     const hasAuthToken = !!sessionStorage.getItem(AUTH_TOKEN_KEY)
@@ -722,10 +723,37 @@ function App() {
               {/* Cover art */}
               <div className="flex flex-col items-center justify-center p-3 gap-2" style={{ minWidth: 80, maxWidth: 200 }}>
                 {selectedEntry.coverUrl ? (
-                  <AnsiArt src={selectedEntry.coverUrl} mode="ascii" maxWidth={32} maxHeight={28} forceAspect={2/3} />
+                  coverDisplayMode === 'original' ? (
+                    <img
+                      src={selectedEntry.coverUrl}
+                      alt=""
+                      style={{ width: 112, aspectRatio: '2/3', objectFit: 'cover', display: 'block' }}
+                    />
+                  ) : (
+                    <AnsiArt
+                      src={selectedEntry.coverUrl}
+                      mode={coverDisplayMode}
+                      maxWidth={32}
+                      maxHeight={28}
+                      forceAspect={2/3}
+                      brightness={coverDisplayMode === 'ascii' ? 1.6 : 1}
+                    />
+                  )
                 ) : (
                   <div className="text-dim text-xs text-center">fetching<br/>cover...</div>
                 )}
+                {/* Mode toggle */}
+                <div className="flex gap-1">
+                  {(['ascii', 'ansi', 'original'] as const).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setCoverDisplayMode(m)}
+                      className={`text-xs px-1 ${coverDisplayMode === m ? 'text-text' : 'text-dim hover:text-muted'}`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
                 <button
                   onClick={() => fetchCoverOptions(selectedEntry)}
                   className="text-dim text-xs hover:text-muted"
