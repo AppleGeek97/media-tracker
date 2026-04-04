@@ -39,7 +39,7 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
             x: c * SPACING + SPACING / 2,
             y: r * SPACING + SPACING / 2,
             phase: Math.random() * Math.PI * 2,
-            speed: 0.0004 + Math.random() * 0.0004,
+            speed: 0.0001 + Math.random() * 0.0001,
           })
         }
       }
