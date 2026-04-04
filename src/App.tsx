@@ -250,6 +250,8 @@ function App() {
   const { entries, loading, add, update, remove, syncStatus, manualSync } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
   const [coverOptions, setCoverOptions] = useState<string[]>([])
+  const [fetchingCovers, setFetchingCovers] = useState(false)
+  const [coverFetchEmpty, setCoverFetchEmpty] = useState(false)
   type CoverMode = 'ascii' | 'ansi' | 'original'
   const COVER_MODES_KEY = 'jefflog-cover-modes'
   const getCoverMode = (id: string): CoverMode => {
@@ -376,23 +378,30 @@ function App() {
   }
 
   const fetchCoverOptions = async (entry: MediaEntry) => {
+    setFetchingCovers(true)
+    setCoverFetchEmpty(false)
     try {
       const res = await fetch(`/api/cover?title=${encodeURIComponent(entry.title)}&type=${entry.type}`)
       const data = await res.json()
       const urls: string[] = data.urls ?? []
       setCoverOptions(urls)
+      if (urls.length === 0) setCoverFetchEmpty(true)
       if (urls.length > 0 && !entry.coverUrl) {
         setSelectedEntry(prev => prev?.id === entry.id ? { ...prev, coverUrl: urls[0] } : prev)
         update(entry.id, { coverUrl: urls[0] })
       }
     } catch (e) {
       console.error('Cover fetch failed:', e)
+      setCoverFetchEmpty(true)
+    } finally {
+      setFetchingCovers(false)
     }
   }
 
   // Auto-fetch cover options when opening an entry without a cover
   useEffect(() => {
     setCoverOptions([])
+    setCoverFetchEmpty(false)
     if (!selectedEntry || selectedEntry.coverUrl) return
     fetchCoverOptions(selectedEntry)
   }, [selectedEntry?.id])
@@ -400,6 +409,7 @@ function App() {
   const handleCloseDetail = () => {
     setSelectedEntry(null)
     setCoverOptions([])
+    setCoverFetchEmpty(false)
   }
 
   const handleConfirmEntry = () => {
@@ -771,15 +781,19 @@ function App() {
                   ))}
                 </div>
                 <button
-                  onClick={() => fetchCoverOptions(selectedEntry)}
-                  className="text-dim text-xs hover:text-muted"
+                  onClick={() => { setCoverFetchEmpty(false); fetchCoverOptions(selectedEntry) }}
+                  disabled={fetchingCovers}
+                  className="text-dim text-xs hover:text-muted disabled:opacity-50"
                 >
-                  change
+                  {fetchingCovers ? 'searching...' : 'change'}
                 </button>
               </div>
             </div>
 
             {/* Cover picker strip */}
+            {coverFetchEmpty && coverOptions.length === 0 && (
+              <div className="border-t border-border px-3 py-2 text-xs text-dim">no results found</div>
+            )}
             {coverOptions.length > 0 && (
               <div className="border-t border-border">
                 <div className="flex gap-2 px-3 py-2 overflow-x-auto">
@@ -814,8 +828,8 @@ function App() {
                     className="flex-1 px-2 py-1 text-xs border border-border bg-bg text-text focus:outline-none focus:border-muted"
                     placeholder="search for different poster..."
                   />
-                  <button type="submit" className="px-3 py-1 text-xs border border-border text-muted hover:text-text hover:border-muted">
-                    search
+                  <button type="submit" disabled={fetchingCovers} className="px-3 py-1 text-xs border border-border text-muted hover:text-text hover:border-muted disabled:opacity-50">
+                    {fetchingCovers ? '...' : 'search'}
                   </button>
                 </form>
               </div>

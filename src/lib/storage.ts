@@ -246,7 +246,8 @@ export const promoteMaturedFuturelogEntries = async (): Promise<void> => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const futurelogEntries = loadEntries('futurelog')
+  // Fetch fresh from cloud so we don't miss entries not yet in localStorage
+  const futurelogEntries = await syncEntriesFromCloud('futurelog')
   const toPromote = futurelogEntries.filter((entry) => {
     if (!entry.releaseDate) return false
     const parts = entry.releaseDate.split('/')
