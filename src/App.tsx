@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { InputBar } from './components/InputBar'
 import { Timeline } from './components/Timeline'
 import { MediaColumns } from './components/MediaColumns'
@@ -14,18 +14,17 @@ const AUTH_TOKEN_KEY = 'jefflog-auth-token'
 
 
 function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
-  useEffect(() => {
-    const canvas = document.createElement('canvas')
-    // Only cover top half of the screen
-    canvas.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:9999'
-    document.body.appendChild(canvas)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
     const ctx = canvas.getContext('2d')!
     const SPACING = 36
     const DOT_RADIUS = 1.5
 
-    let width = canvas.width = window.innerWidth
-    let height = canvas.height = Math.floor(window.innerHeight / 2)
+    let width = canvas.width = canvas.offsetWidth
+    let height = canvas.height = canvas.offsetHeight
 
     type Dot = { x: number; y: number; phase: number; speed: number }
     let dots: Dot[] = []
@@ -63,8 +62,8 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
     animId = requestAnimationFrame(draw)
 
     const onResize = () => {
-      width = canvas.width = window.innerWidth
-      height = canvas.height = Math.floor(window.innerHeight / 2)
+      width = canvas.width = canvas.offsetWidth
+      height = canvas.height = canvas.offsetHeight
       buildGrid()
     }
     window.addEventListener('resize', onResize)
@@ -72,11 +71,16 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
     return () => {
       cancelAnimationFrame(animId)
       window.removeEventListener('resize', onResize)
-      document.body.removeChild(canvas)
     }
   }, [isDayTheme])
 
-  return null
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      style={{ zIndex: 0 }}
+    />
+  )
 }
 
 function Logo() {
@@ -429,7 +433,6 @@ function App() {
 
   return (
     <div className={`flex flex-col h-screen transition-all ${showCalendar ? 'mr-72' : ''}`}>
-      <AnimatedBackground isDayTheme={isDayTheme} />
       <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} onSync={manualSync} />
 
       {/* Calendar Toggle + Version */}
@@ -459,7 +462,9 @@ function App() {
       )}
 
       {/* Top Half - Logo + Toggle + Input */}
-      <div className="h-1/2 flex flex-col items-center justify-center border-b border-border">
+      <div className="relative h-1/2 flex flex-col items-center justify-center border-b border-border overflow-hidden">
+        <AnimatedBackground isDayTheme={isDayTheme} />
+        <div className="relative flex flex-col items-center w-full" style={{ zIndex: 1 }}>
         <Logo />
 
         <div className="mt-6">
@@ -472,6 +477,7 @@ function App() {
 
         <div className="mt-2 text-dim text-xs">
           {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'} in {currentList}
+        </div>
         </div>
       </div>
 
