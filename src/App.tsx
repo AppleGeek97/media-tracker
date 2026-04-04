@@ -16,7 +16,7 @@ const AUTH_TOKEN_KEY = 'jefflog-auth-token'
 function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
   useEffect(() => {
     const canvas = document.createElement('canvas')
-    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0'
+    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999'
     document.body.appendChild(canvas)
 
     const ctx = canvas.getContext('2d')!
@@ -37,8 +37,7 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
 
     let animId: number
     const draw = (t: number) => {
-      ctx.fillStyle = isDayTheme ? '#f5f5f5' : '#0a0a0a'
-      ctx.fillRect(0, 0, width, height)
+      ctx.clearRect(0, 0, width, height)
       const color = isDayTheme ? '0,0,0' : '255,255,255'
       for (const dot of dots) {
         const alpha = ((Math.sin(dot.phase + t * dot.speed) + 1) / 2) * dot.maxAlpha
