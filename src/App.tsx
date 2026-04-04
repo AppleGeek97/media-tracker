@@ -42,7 +42,8 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
     let animId: number
 
     const draw = (t: number) => {
-      ctx.clearRect(0, 0, width, height)
+      ctx.fillStyle = isDayTheme ? '#f5f5f5' : '#0a0a0a'
+      ctx.fillRect(0, 0, width, height)
       const color = isDayTheme ? '0,0,0' : '255,255,255'
       for (const dot of dots) {
         const alpha = ((Math.sin(dot.phase + t * dot.speed) + 1) / 2) * dot.maxAlpha
@@ -428,7 +429,7 @@ function App() {
   }
 
   return (
-    <div className={`flex flex-col h-screen transition-all ${showCalendar ? 'mr-72' : ''}`}>
+    <div className={`relative flex flex-col h-screen transition-all ${showCalendar ? 'mr-72' : ''}`} style={{ zIndex: 1 }}>
       <AnimatedBackground isDayTheme={isDayTheme} />
       <ThemeToggle isDayTheme={isDayTheme} onToggle={toggleTheme} syncStatus={syncStatus} onSync={manualSync} />
 
