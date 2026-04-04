@@ -463,7 +463,16 @@ function App() {
 
       {/* Calendar Toggle + Version */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
-        <span className="text-dim text-xs select-none">v{__APP_VERSION__}</span>
+        <div className="relative group">
+          <span className="text-dim text-xs select-none cursor-default">v{__APP_VERSION__}</span>
+          <div className="absolute right-0 top-5 hidden group-hover:block z-50 w-64 border border-border bg-bg p-2 shadow-lg">
+            {__APP_CHANGELOG__.map((line, i) => (
+              <div key={i} className="text-xs text-muted py-0.5 border-b border-border last:border-0 last:pb-0 first:pt-0">
+                {line}
+              </div>
+            ))}
+          </div>
+        </div>
         <button
         onClick={() => setShowCalendar(prev => !prev)}
         className={`p-2 border text-muted hover:text-text hover:border-muted ${

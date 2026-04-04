@@ -1,13 +1,25 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { readFileSync } from 'fs'
+import { readFileSync, execSync } from 'fs'
+import { execSync as exec } from 'child_process'
+import { readFileSync as rfs } from 'fs'
 
-const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
+const pkg = JSON.parse(rfs('./package.json', 'utf-8'))
+
+// Last 5 commits, skip auto "Bump version" commits
+let changelog: string[] = []
+try {
+  changelog = exec('git log --pretty=format:"%s" -20', { encoding: 'utf-8' })
+    .split('\n')
+    .filter(l => l && !l.startsWith('Bump version'))
+    .slice(0, 5)
+} catch {}
 
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_CHANGELOG__: JSON.stringify(changelog),
   },
   test: {
     environment: 'jsdom',
