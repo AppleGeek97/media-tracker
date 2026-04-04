@@ -22,8 +22,8 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const DOT_COUNT = 80
-    const DOT_RADIUS = 1.5
+    const DOT_COUNT = 120
+    const DOT_RADIUS = 2
 
     let width = window.innerWidth
     let height = window.innerHeight
@@ -36,7 +36,7 @@ function AnimatedBackground({ isDayTheme }: { isDayTheme: boolean }) {
       y: Math.random() * height,
       phase: Math.random() * Math.PI * 2,
       speed: 0.003 + Math.random() * 0.007,
-      maxAlpha: 0.15 + Math.random() * 0.25,
+      maxAlpha: 0.4 + Math.random() * 0.4,
     }))
 
     let animId: number
