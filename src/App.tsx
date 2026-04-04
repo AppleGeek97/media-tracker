@@ -628,7 +628,8 @@ function App() {
       {selectedEntry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80" onClick={handleCloseDetail} />
-          <div className="relative w-full max-w-sm border border-border bg-bg">
+          <div className="relative w-full max-w-md border border-border bg-bg">
+            {/* Header */}
             <div className="px-4 py-2 border-b border-border flex items-center justify-between">
               <span className={`text-xs ${getTypeColor(selectedEntry.type)}`}>
                 {selectedEntry.type.toUpperCase()}
@@ -645,34 +646,20 @@ function App() {
               </select>
             </div>
 
-            {/* Cover art — shown once fetched, placeholder while loading */}
-            <div className="flex justify-center border-b border-border py-3">
-              {selectedEntry.coverUrl ? (
-                <AnsiArt
-                  src={selectedEntry.coverUrl}
-                  width={32}
-                  height={24}
-                />
-              ) : (
-                <div className="text-dim text-xs" style={{ width: 160, height: 168, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  fetching cover...
+            {/* Body: info left, cover right */}
+            <div className="flex">
+              <div className="flex-1 p-4 space-y-3 border-r border-border">
+                <div>
+                  <label className="text-label text-xs block mb-1">TITLE</label>
+                  <input
+                    type="text"
+                    value={selectedEntry.title}
+                    onChange={(e) => setSelectedEntry({ ...selectedEntry, title: e.target.value })}
+                    className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
+                  />
                 </div>
-              )}
-            </div>
-
-            <div className="p-4 space-y-3">
-              <div>
-                <label className="text-label text-xs block mb-1">TITLE</label>
-                <input
-                  type="text"
-                  value={selectedEntry.title}
-                  onChange={(e) => setSelectedEntry({ ...selectedEntry, title: e.target.value })}
-                  className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
-                />
-              </div>
-              <div className="flex gap-4">
                 {selectedEntry.list === 'backlog' && (
-                  <>
+                  <div className="flex gap-3">
                     <div className="flex-1">
                       <label className="text-label text-xs block mb-1">YEAR</label>
                       <input
@@ -702,10 +689,10 @@ function App() {
                         <option value="dropped">DROPPED</option>
                       </select>
                     </div>
-                  </>
+                  </div>
                 )}
                 {selectedEntry.list === 'futurelog' && (
-                  <div className="flex-1">
+                  <div>
                     <label className="text-label text-xs block mb-1">RELEASE DATE</label>
                     <input
                       type="text"
@@ -715,6 +702,15 @@ function App() {
                       className="w-full px-2 py-1 text-xs border border-border bg-bg text-text"
                     />
                   </div>
+                )}
+              </div>
+
+              {/* Cover art */}
+              <div className="flex items-center justify-center p-3" style={{ width: 156 }}>
+                {selectedEntry.coverUrl ? (
+                  <AnsiArt src={selectedEntry.coverUrl} width={28} height={26} />
+                ) : (
+                  <div className="text-dim text-xs text-center">fetching<br/>cover...</div>
                 )}
               </div>
             </div>
