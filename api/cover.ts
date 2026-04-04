@@ -6,7 +6,7 @@ async function fetchMovieCover(title: string): Promise<string | null> {
   const res = await fetch(
     `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(title)}&page=1`
   )
-  const data = await res.json()
+  const data = await res.json() as any
   const path = data.results?.[0]?.poster_path
   return path ? `https://image.tmdb.org/t/p/w200${path}` : null
 }
@@ -17,7 +17,7 @@ async function fetchTVCover(title: string): Promise<string | null> {
   const res = await fetch(
     `https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(title)}&page=1`
   )
-  const data = await res.json()
+  const data = await res.json() as any
   const path = data.results?.[0]?.poster_path
   return path ? `https://image.tmdb.org/t/p/w200${path}` : null
 }
@@ -28,7 +28,7 @@ async function fetchGameCover(title: string): Promise<string | null> {
   const res = await fetch(
     `https://api.rawg.io/api/games?key=${apiKey}&search=${encodeURIComponent(title)}&page_size=1`
   )
-  const data = await res.json()
+  const data = await res.json() as any
   return data.results?.[0]?.background_image ?? null
 }
 
@@ -36,7 +36,7 @@ async function fetchComicCover(title: string): Promise<string | null> {
   const res = await fetch(
     `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=1&fields=cover_i`
   )
-  const data = await res.json()
+  const data = await res.json() as any
   const coverId = data.docs?.[0]?.cover_i
   return coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null
 }

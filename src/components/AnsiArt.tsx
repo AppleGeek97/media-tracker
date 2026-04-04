@@ -23,6 +23,7 @@ export function AnsiArt({ src, width = 32, height = 24, className = '' }: Props)
     setRows([])
 
     const img = new Image()
+    img.crossOrigin = 'anonymous'
 
     img.onload = () => {
       const canvas = canvasRef.current
@@ -33,7 +34,15 @@ export function AnsiArt({ src, width = 32, height = 24, className = '' }: Props)
       canvas.height = height * 2  // 2 source pixels per displayed row
       ctx.drawImage(img, 0, 0, width, height * 2)
 
-      const { data } = ctx.getImageData(0, 0, width, height * 2)
+      let imageData: ImageData
+      try {
+        imageData = ctx.getImageData(0, 0, width, height * 2)
+      } catch {
+        // Canvas tainted by cross-origin image (CORS not supported by source)
+        setLoading(false)
+        return
+      }
+      const { data } = imageData
 
       const result: AnsiCell[][] = []
       for (let row = 0; row < height; row++) {

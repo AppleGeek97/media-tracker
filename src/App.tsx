@@ -649,7 +649,7 @@ function App() {
             <div className="flex justify-center border-b border-border py-3">
               {selectedEntry.coverUrl ? (
                 <AnsiArt
-                  src={`/api/cover-image?url=${encodeURIComponent(selectedEntry.coverUrl)}`}
+                  src={selectedEntry.coverUrl}
                   width={32}
                   height={24}
                 />

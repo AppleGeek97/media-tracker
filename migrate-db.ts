@@ -3,7 +3,7 @@
  * Run this to ensure your database schema is up to date
  */
 
-import { sql } from '../db.js'
+import { sql } from './api/db.js'
 
 export async function migrateDatabase() {
   try {
