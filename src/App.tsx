@@ -741,6 +741,7 @@ function App() {
                     <img
                       src={url}
                       alt=""
+                      crossOrigin="anonymous"
                       style={{ width: 40, height: 56, objectFit: 'cover', display: 'block' }}
                     />
                   </button>
