@@ -249,6 +249,7 @@ function App() {
   const [currentList, setCurrentList] = useState<ListType>('backlog')
   const { entries, loading, add, update, remove, syncStatus, manualSync } = useMediaEntries(currentList)
   const [showCalendar, setShowCalendar] = useState(false)
+  const [coverOptions, setCoverOptions] = useState<string[]>([])
   const [isUnlocked, setIsUnlocked] = useState(() => {
     // Check if user has a valid auth token (new method) or legacy unlocked flag
     const hasAuthToken = !!sessionStorage.getItem(AUTH_TOKEN_KEY)
@@ -357,27 +358,31 @@ function App() {
     setSelectedEntry(entry)
   }
 
-  // Auto-fetch cover art when opening an entry that doesn't have one yet
-  useEffect(() => {
-    if (!selectedEntry || selectedEntry.coverUrl) return
-    const id = selectedEntry.id
-    const fetchCover = async () => {
-      try {
-        const res = await fetch(`/api/cover?title=${encodeURIComponent(selectedEntry.title)}&type=${selectedEntry.type}`)
-        const data = await res.json()
-        if (data.url) {
-          setSelectedEntry(prev => prev?.id === id ? { ...prev, coverUrl: data.url } : prev)
-          update(id, { coverUrl: data.url })
-        }
-      } catch (e) {
-        console.error('Cover fetch failed:', e)
+  const fetchCoverOptions = async (entry: MediaEntry) => {
+    try {
+      const res = await fetch(`/api/cover?title=${encodeURIComponent(entry.title)}&type=${entry.type}`)
+      const data = await res.json()
+      const urls: string[] = data.urls ?? []
+      setCoverOptions(urls)
+      if (urls.length > 0 && !entry.coverUrl) {
+        setSelectedEntry(prev => prev?.id === entry.id ? { ...prev, coverUrl: urls[0] } : prev)
+        update(entry.id, { coverUrl: urls[0] })
       }
+    } catch (e) {
+      console.error('Cover fetch failed:', e)
     }
-    fetchCover()
+  }
+
+  // Auto-fetch cover options when opening an entry without a cover
+  useEffect(() => {
+    setCoverOptions([])
+    if (!selectedEntry || selectedEntry.coverUrl) return
+    fetchCoverOptions(selectedEntry)
   }, [selectedEntry?.id])
 
   const handleCloseDetail = () => {
     setSelectedEntry(null)
+    setCoverOptions([])
   }
 
   const handleConfirmEntry = () => {
@@ -706,14 +711,42 @@ function App() {
               </div>
 
               {/* Cover art */}
-              <div className="flex items-center justify-center p-3" style={{ width: 156 }}>
+              <div className="flex flex-col items-center justify-center p-3 gap-2" style={{ width: 156 }}>
                 {selectedEntry.coverUrl ? (
                   <AnsiArt src={selectedEntry.coverUrl} width={28} height={26} />
                 ) : (
                   <div className="text-dim text-xs text-center">fetching<br/>cover...</div>
                 )}
+                <button
+                  onClick={() => fetchCoverOptions(selectedEntry)}
+                  className="text-dim text-xs hover:text-muted"
+                >
+                  change
+                </button>
               </div>
             </div>
+
+            {/* Cover picker strip */}
+            {coverOptions.length > 0 && (
+              <div className="flex gap-2 px-3 py-2 border-t border-border overflow-x-auto">
+                {coverOptions.map((url, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setSelectedEntry(prev => prev ? { ...prev, coverUrl: url } : prev)
+                      update(selectedEntry.id, { coverUrl: url })
+                    }}
+                    className={`flex-shrink-0 border ${selectedEntry.coverUrl === url ? 'border-muted' : 'border-border hover:border-muted'}`}
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      style={{ width: 40, height: 56, objectFit: 'cover', display: 'block' }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="flex gap-2 p-4 border-t border-border">
               <button

@@ -1,42 +1,51 @@
-async function fetchMovieCover(title: string): Promise<string | null> {
+const TMDB_IMG = 'https://image.tmdb.org/t/p/w200'
+
+async function fetchMovieCovers(title: string): Promise<string[]> {
   const apiKey = process.env.TMDB_API_KEY
-  if (!apiKey) return null
+  if (!apiKey) return []
   const res = await fetch(
     `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(title)}&page=1`
   )
   const data = await res.json() as any
-  const path = data.results?.[0]?.poster_path
-  return path ? `https://image.tmdb.org/t/p/w200${path}` : null
+  return (data.results ?? [])
+    .filter((r: any) => r.poster_path)
+    .slice(0, 5)
+    .map((r: any) => `${TMDB_IMG}${r.poster_path}`)
 }
 
-async function fetchTVCover(title: string): Promise<string | null> {
+async function fetchTVCovers(title: string): Promise<string[]> {
   const apiKey = process.env.TMDB_API_KEY
-  if (!apiKey) return null
+  if (!apiKey) return []
   const res = await fetch(
     `https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${encodeURIComponent(title)}&page=1`
   )
   const data = await res.json() as any
-  const path = data.results?.[0]?.poster_path
-  return path ? `https://image.tmdb.org/t/p/w200${path}` : null
+  return (data.results ?? [])
+    .filter((r: any) => r.poster_path)
+    .slice(0, 5)
+    .map((r: any) => `${TMDB_IMG}${r.poster_path}`)
 }
 
-async function fetchGameCover(title: string): Promise<string | null> {
+async function fetchGameCovers(title: string): Promise<string[]> {
   const apiKey = process.env.RAWG_API_KEY
-  if (!apiKey) return null
+  if (!apiKey) return []
   const res = await fetch(
-    `https://api.rawg.io/api/games?key=${apiKey}&search=${encodeURIComponent(title)}&page_size=1`
+    `https://api.rawg.io/api/games?key=${apiKey}&search=${encodeURIComponent(title)}&page_size=5`
   )
   const data = await res.json() as any
-  return data.results?.[0]?.background_image ?? null
+  return (data.results ?? [])
+    .filter((r: any) => r.background_image)
+    .map((r: any) => r.background_image as string)
 }
 
-async function fetchComicCover(title: string): Promise<string | null> {
+async function fetchComicCovers(title: string): Promise<string[]> {
   const res = await fetch(
-    `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=1&fields=cover_i`
+    `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5&fields=cover_i`
   )
   const data = await res.json() as any
-  const coverId = data.docs?.[0]?.cover_i
-  return coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null
+  return (data.docs ?? [])
+    .filter((d: any) => d.cover_i)
+    .map((d: any) => `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`)
 }
 
 export async function GET(request: Request) {
@@ -51,18 +60,18 @@ export async function GET(request: Request) {
     })
   }
 
-  let imageUrl: string | null = null
+  let urls: string[] = []
 
   try {
-    if (type === 'movie') imageUrl = await fetchMovieCover(title)
-    else if (type === 'tv') imageUrl = await fetchTVCover(title)
-    else if (type === 'game') imageUrl = await fetchGameCover(title)
-    else if (type === 'comic') imageUrl = await fetchComicCover(title)
+    if (type === 'movie') urls = await fetchMovieCovers(title)
+    else if (type === 'tv') urls = await fetchTVCovers(title)
+    else if (type === 'game') urls = await fetchGameCovers(title)
+    else if (type === 'comic') urls = await fetchComicCovers(title)
   } catch (e) {
     console.error('Cover fetch error:', e)
   }
 
-  return new Response(JSON.stringify({ url: imageUrl }), {
+  return new Response(JSON.stringify({ urls }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   })
