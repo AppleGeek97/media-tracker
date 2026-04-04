@@ -1,5 +1,3 @@
-import { requireAuth, AuthError } from './lib/auth.js'
-
 async function fetchMovieCover(title: string): Promise<string | null> {
   const apiKey = process.env.TMDB_API_KEY
   if (!apiKey) return null
@@ -42,18 +40,6 @@ async function fetchComicCover(title: string): Promise<string | null> {
 }
 
 export async function GET(request: Request) {
-  try {
-    await requireAuth(request)
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-    throw error
-  }
-
   const url = new URL(request.url)
   const title = url.searchParams.get('title')
   const type = url.searchParams.get('type')
