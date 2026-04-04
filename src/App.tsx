@@ -713,7 +713,7 @@ function App() {
               {/* Cover art */}
               <div className="flex flex-col items-center justify-center p-3 gap-2" style={{ minWidth: 80, maxWidth: 200 }}>
                 {selectedEntry.coverUrl ? (
-                  <AnsiArt src={selectedEntry.coverUrl} maxWidth={32} maxHeight={28} forceAspect={2/3} />
+                  <AnsiArt src={selectedEntry.coverUrl} mode="ascii" maxWidth={32} maxHeight={28} forceAspect={2/3} />
                 ) : (
                   <div className="text-dim text-xs text-center">fetching<br/>cover...</div>
                 )}
